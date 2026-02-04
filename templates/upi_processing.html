@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UPI Payment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="upi-box">
+    <h2>Complete Your Payment</h2>
+
+    <div class="loader"></div>
+
+    <p class="status">Waiting for payment confirmation...</p>
+
+    <div class="upi-details">
+        <p><b>UPI ID:</b> {{ upi_id }}</p>
+        <p><b>Amount:</b> ₹{{ amount }}</p>
+    </div>
+
+    <p class="timer">
+        Time left: <span id="time">02:00</span>
+    </p>
+
+    <p class="note">
+        Please complete the payment in your UPI app.
+    </p>
+</div>
+
+<script>
+let time = 120;
+
+const timer = setInterval(() => {
+    let minutes = Math.floor(time / 60);
+    let seconds = time % 60;
+
+    document.getElementById("time").innerText =
+        `${minutes}:${seconds < 10 ? "0" + seconds : seconds}`;
+
+    time--;
+
+    if (time < 0) {
+        clearInterval(timer);
+        window.location.href = "/payment-success";
+    }
+}, 1000);
+</script>
+
+</body>
+</html>
+

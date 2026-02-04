@@ -1,0 +1,81 @@
+{% include "header.html" %}
+
+<div class="search-layout">
+
+  <!-- LEFT FILTER -->
+  <form class="filter-box" method="get" action="/search">
+
+    <h3>Filters</h3>
+
+    <input type="hidden" name="q" value="{{ query }}">
+
+    <!-- CATEGORY -->
+    <label>Category</label>
+    <select name="category">
+      <option value="">All</option>
+      <option value="men">Men</option>
+      <option value="women">Women</option>
+      <option value="kids">Kids</option>
+    </select>
+
+    <!-- TYPE -->
+    <label>Type</label>
+    <select name="type">
+      <option value="">All</option>
+      <option>Jeans</option>
+      <option>Shirt</option>
+      <option>Tshirt</option>
+      <option>Saree</option>
+    </select>
+
+    <!-- COLOR -->
+    <label>Color</label>
+    <select name="color">
+      <option value="">All</option>
+      <option>Black</option>
+      <option>Blue</option>
+      <option>White</option>
+      <option>Red</option>
+    </select>
+
+    <!-- PRICE -->
+    <label>Min Price</label>
+    <input type="number" name="min_price">
+
+    <label>Max Price</label>
+    <input type="number" name="max_price">
+
+    <!-- SORT -->
+    <label>Sort Price</label>
+    <select name="sort">
+      <option value="">None</option>
+      <option value="low">Low → High</option>
+      <option value="high">High → Low</option>
+    </select>
+
+    <button type="submit">Apply Filters</button>
+
+  </form>
+
+
+  <!-- RIGHT PRODUCTS -->
+  <div class="results-area">
+
+    <h2>Results for "{{ query }}"</h2>
+
+    <div class="products">
+      {% for product in products %}
+      <div class="card">
+        <img src="{{ url_for('static', filename=product.image) }}">
+        <h3>{{ product.name }}</h3>
+        <p>₹{{ product.price }}</p>
+        <a href="/product/{{ product.id }}" class="card-btn">View</a>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+</div>
+
+{% include "footer.html" %}

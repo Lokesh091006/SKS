@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enter UPI ID</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script>
+        function validateUPI() {
+            let upi = document.getElementById("upi").value.trim();
+            let error = document.getElementById("error");
+
+            // exactly 10 digits + @axl or @ybl
+            let upiPattern = /^[0-9]{10}@(axl|ybl)$/;
+
+            if (!upiPattern.test(upi)) {
+                error.innerText = "❌ Wrong UPI ID. Enter 10 digits followed by @axl or @ybl";
+                return false; // STOP form submit
+            }
+
+            error.innerText = "";
+            return true; // ALLOW form submit
+        }
+    </script>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Enter Your UPI ID</h2>
+
+    <form method="POST" onsubmit="return validateUPI()">
+        <input
+            type="text"
+            id="upi"
+            name="upi"
+            placeholder="Example: 9876543210@axl"
+            required
+        >
+
+        <p id="error" style="color:red;"></p>
+
+        <button type="submit">
+            Pay ₹{{ session['final_amount'] }}
+        </button>
+    </form>
+</div>
+
+</body>
+</html>
+

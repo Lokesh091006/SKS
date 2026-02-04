@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add New Address - Mall SKS</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        body {
+            background: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+
+        .address-container {
+            max-width: 500px;
+            margin: 80px auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .row input {
+            flex: 1;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #ff3f6c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #e6325a;
+        }
+
+        @media (max-width: 600px) {
+            .address-container {
+                margin: 20px;
+            }
+            .row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+{% include "header.html" %}
+
+<div class="address-container">
+
+    <h2>➕ Add New Address</h2>
+
+    <form method="post">
+
+        <input type="text" name="name" placeholder="Full Name" required>
+
+        <input type="text" name="mobile" placeholder="10 Digit Mobile Number"
+               pattern="[0-9]{10}" required>
+
+        <textarea name="house" placeholder="House No, Building, Street"
+                  rows="2" required></textarea>
+
+        <textarea name="street" placeholder="Area, Locality"
+                  rows="2" required></textarea>
+
+        <div class="row">
+            <input type="text" name="city" placeholder="City" required>
+            <input type="text" name="state" placeholder="State" required>
+        </div>
+
+        <input type="text" name="pincode"
+               placeholder="Pincode"
+               pattern="[0-9]{6}" required>
+
+        <button type="submit">
+            Save Address →
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>

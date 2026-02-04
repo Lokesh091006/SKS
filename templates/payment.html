@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<div class="container">
+    <h2>Select Payment Method</h2>
+
+    <div class="price-box">
+        <h3>Total after coupon: ₹<span id="after-coupon">{{ total_after_coupon }}</span></h3>
+        <h3>Final Payable Amount: ₹<span id="payable">{{ total_after_coupon }}</span></h3>
+
+        <p id="upi-discount-msg" style="color:green; display:none;">
+            When UPI is selected, only the remaining amount needs to be paid
+        </p>
+    </div>
+
+    <form method="POST">
+
+        <div class="payment-option">
+            <input type="radio" name="method" value="phonepe" onclick="applyUpiDiscount()" required>
+            PhonePe (UPI)
+        </div>
+
+        <div class="payment-option">
+            <input type="radio" name="method" value="paytm" onclick="applyUpiDiscount()">
+            Paytm (UPI)
+        </div>
+
+        <div class="payment-option">
+            <input type="radio" name="method" value="card" onclick="resetAmount()">
+            Debit / Credit Card
+        </div>
+
+        <div class="payment-option">
+            <input type="radio" name="method" value="cod" onclick="resetAmount()">
+            Cash on Delivery (+₹30)
+        </div>
+
+        <button type="submit">Continue</button>
+    </form>
+</div>

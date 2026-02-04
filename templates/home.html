@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mall SKS</title>
+
+    <!-- RESPONSIVE -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- MAIN CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+{% include "header.html" %}
+
+<!-- ================= HERO SECTION ================= -->
+<section class="hero">
+
+    <!-- LEFT -->
+    <div class="hero-left">
+        <h1>Mall <span>SKS</span></h1>
+        <p>
+            Fashion that moves you. <br>
+            Discover clothing, footwear & accessories.
+        </p>
+        <a href="/category/men" class="hero-btn">Shop Now</a>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="hero-right">
+        <img src="https://www.jockey.in/cdn/shop/files/AM38_GREEN_0103_S125_JKY_1.webp?v=1716465594&width=560"
+             class="hero-img img1">
+
+        <img src="https://tse3.mm.bing.net/th/id/OIP.U5786qlQJInNcJ_Z9CNDyQHaHa?pid=Api"
+             class="hero-img img2">
+
+        <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
+             class="hero-img img3">
+    </div>
+
+</section>
+
+<!-- ================= SHOP BY CATEGORY ================= -->
+<section class="collections">
+
+    <h2 class="section-title">Shop by Category</h2>
+
+    <div class="collection-grid">
+
+        <!-- MEN -->
+        <a href="/category/men" class="collection-card">
+            <img src="https://www.jockey.in/cdn/shop/files/AM38_GREEN_0103_S125_JKY_1.webp?v=1716465594&width=560">
+            <div class="overlay">
+                <h3>Men Collection</h3>
+                <p>Casuals & Formals</p>
+            </div>
+        </a>
+
+        <!-- WOMEN -->
+        <a href="/category/women" class="collection-card">
+            <img src="https://tse3.mm.bing.net/th/id/OIP.U5786qlQJInNcJ_Z9CNDyQHaHa?pid=Api">
+            <div class="overlay">
+                <h3>Women Collection</h3>
+                <p>Dresses & Ethnic</p>
+            </div>
+        </a>
+
+        <!-- KIDS -->
+        <a href="/category/kids" class="collection-card">
+            <img src="https://images.unsplash.com/photo-1601924638867-3ec62c1a9b0c">
+            <div class="overlay">
+                <h3>Kids Collection</h3>
+                <p>Fun & Comfort</p>
+            </div>
+        </a>
+
+    </div>
+
+</section>
+<!-- MOBILE BOTTOM NAV -->
+<div class="mobile-bottom-nav">
+  <a href="/">🏠<span>Home</span></a>
+  <a href="/orders">📦<span>Orders</span></a>
+  <a href="/wishlist">❤️<span>Wishlist</span></a>
+  <a href="/profile">👤<span>Profile</span></a>
+</div>
+
+
+<!-- ================= FOOTER ================= -->
+<div style="height:60px;"></div>
+{% include "footer.html" %}
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ product.name }} | Mall SKS</title>
+
+    <!-- RESPONSIVE -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- MAIN CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+{% include "header.html" %}
+
+<!-- ================= PRODUCT PAGE ================= -->
+<section class="product-page">
+
+    <!-- LEFT : IMAGE -->
+    <div class="product-image">
+        <img src="{{ product.image }}" alt="{{ product.name }}">
+    </div>
+
+    <!-- RIGHT : DETAILS -->
+    <div class="product-details">
+
+        <h1 class="product-title">{{ product.name }}</h1>
+
+        <p class="product-price">₹ {{ product.price }}</p>
+
+        <p class="product-desc">
+            Premium quality {{ product.name }} with modern fit.  
+            Perfect for daily wear and special occasions.
+        </p>
+
+        <!-- QUANTITY -->
+        <div class="qty-box">
+            <label for="qty">Quantity</label>
+            <select id="qty">
+                {% for i in range(1,6) %}
+                    <option value="{{ i }}">{{ i }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- DELIVERY -->
+        <p class="delivery">
+            🚚 Estimated delivery in <b>3–5 days</b>
+        </p>
+
+        <!-- ACTION BUTTONS -->
+        <div class="product-buttons">
+
+            <!-- WISHLIST -->
+            <a href="/add-to-wishlist/{{ product.id }}" class="btn-wishlist">
+                ❤️ Wishlist
+            </a>
+
+            <!-- CART -->
+            <a href="/add/{{ product.id }}" class="btn-cart">
+                🛒 Add to Cart
+            </a>
+
+            <!-- BUY NOW -->
+            <a href="/checkout" class="btn-buy">
+                ⚡ Buy Now
+            </a>
+
+        </div>
+
+        <!-- FEATURES -->
+        <ul class="features">
+            <li>✔ 100% Original Products</li>
+            <li>✔ Easy 7 Days Return</li>
+            <li>✔ Cash on Delivery Available</li>
+        </ul>
+
+    </div>
+
+</section>
+
+{% include "footer.html" %}
+
+</body>
+</html>

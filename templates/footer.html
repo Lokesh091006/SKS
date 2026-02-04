@@ -1,0 +1,100 @@
+<footer class="footer">
+
+    <!-- ================= TOP CATEGORY STRIP ================= -->
+    <div class="footer-strip">
+        <a href="/category/men">Men</a>
+        <a href="/category/women">Women</a>
+        <a href="/category/kids">Kids</a>
+        <a href="/category/shoes">Footwear</a>
+        <a href="/category/accessories">Accessories</a>
+    </div>
+
+    <!-- ================= MAIN FOOTER ================= -->
+    <div class="footer-container">
+
+        <!-- BRAND -->
+        <div class="footer-brand">
+            <h2>Mall <span>SKS</span></h2>
+            <p>
+                Fashion that moves you.<br>
+                Quality styles for every occasion.
+            </p>
+        </div>
+
+        <!-- QUICK LINKS -->
+        <div class="footer-links">
+            <h4>Quick Links</h4>
+            <a href="/">Home</a>
+            <a href="/category/men">Men</a>
+            <a href="/category/women">Women</a>
+            <a href="/category/kids">Kids</a>
+        </div>
+
+        <!-- HELP -->
+        <div class="footer-links">
+            <h4>Help</h4>
+            <a href="/contact">Contact Us</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/refund">Refund Policy</a>
+            <a href="/terms">Terms & Conditions</a>
+        </div>
+
+        <!-- ACCOUNT -->
+        <div class="footer-links">
+            <h4>Account</h4>
+            {% if session.get("username") %}
+                <a href="/profile">My Profile</a>
+<a href="{{ url_for('my_orders') }}">My Orders</a>
+                <a href="/logout">Logout</a>
+            {% else %}
+                <a href="javascript:void(0)" onclick="openLogin()">Login / Signup</a>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ================= FOOTER BOTTOM ================= -->
+    <div class="footer-bottom">
+        <p>© 2026 Mall SKS. All rights reserved.</p>
+        <p>Designed & Developed by <b>Sureeeee</b></p>
+    </div>
+
+</footer>
+
+
+<!-- ================= MOBILE BOTTOM NAV ================= -->
+<div class="mobile-bottom-nav">
+
+    <a href="/">
+        🏠
+        <span>Home</span>
+    </a>
+
+    <a href="/wishlist">
+        ❤️
+        <span>Wishlist</span>
+    </a>
+
+    <a href="/cart">
+        🛒
+        <span>Cart</span>
+    </a>
+
+    {% if session.get("username") %}
+        <a href="/my-orders">
+            📦
+            <span>Orders</span>
+        </a>
+
+        <a href="/profile">
+            👤
+            <span>Profile</span>
+        </a>
+    {% else %}
+        <a href="javascript:void(0)" onclick="openLogin()">
+            👤
+            <span>Login</span>
+        </a>
+    {% endif %}
+
+</div>

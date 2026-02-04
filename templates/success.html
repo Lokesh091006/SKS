@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<div class="success-wrapper">
+
+  <div class="success-card">
+
+    <h1>🎉 Order Placed Successfully</h1>
+    <p class="thanks">Thank you for shopping with SKS Mall</p>
+
+    {% for o in orders %}
+    <div class="order-box">
+
+        <div class="order-left">
+            <img src="/static/{{ o.product.image if o.product else 'images/placeholder.png' }}">
+        </div>
+
+        <div class="order-right">
+
+            <div class="row">
+              <span>Order ID</span>
+              <b>{{ o.order_id }}</b>
+            </div>
+
+            <div class="row">
+              <span>Product</span>
+              <b>{{ o.product.name if o.product else 'Product' }}</b>
+            </div>
+
+            <div class="row">
+              <span>Price</span>
+              <b>₹{{ o.product.price if o.product else '' }}</b>
+            </div>
+
+            <div class="row">
+              <span>Payment</span>
+              <b>{{ o.payment_method|upper }}</b>
+            </div>
+
+            {% if o.address %}
+            <div class="addr">
+              📍 {{ o.address.house }},
+              {{ o.address.street }},
+              {{ o.address.city }},
+              {{ o.address.state }} - {{ o.address.pincode }}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endfor %}
+
+    <a class="continue-btn" href="/">Continue Shopping →</a>
+
+  </div>
+
+</div>

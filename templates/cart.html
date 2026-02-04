@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Cart - Mall SKS</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+{% include "header.html" %}
+
+<div class="container">
+    <h2>Shopping Cart</h2>
+
+    {% if cart_items %}
+
+    <table class="cart-table">
+        <tr>
+            <th align="left">Product</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Total</th>
+        </tr>
+
+        {% for item in cart_items %}
+        <tr>
+            <td>{{ item.product.name }}</td>
+
+            <td align="center">₹{{ item.product.price }}</td>
+
+            <td align="center">
+                <a href="{{ url_for('decrease', product_id=item.product.id) }}" class="qty-btn">−</a>
+                <span class="qty">{{ item.qty }}</span>
+                <a href="{{ url_for('increase', product_id=item.product.id) }}" class="qty-btn">+</a>
+            </td>
+
+            <td align="center">₹{{ item.subtotal }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <!-- PRICE BOX -->
+    <div class="price-box">
+        <h3>Price Details</h3>
+        <p>Total Amount: ₹{{ total }}</p>
+        <p>Coupon Discount: − ₹{{ discount }}</p>
+        <hr>
+        <h3>Payable Amount: ₹{{ final_amount }}</h3>
+    </div>
+
+    <!-- CHECKOUT BUTTON -->
+    {% if session.get("username") %}
+        <!-- USER LOGGED IN -->
+        <a href="{{ url_for('address') }}">
+            <button class="checkout-btn">
+                Proceed to Checkout
+            </button>
+        </a>
+    {% else %}
+        <!-- USER NOT LOGGED IN -->
+        <button class="checkout-btn" onclick="openLogin()">
+            Login to Continue
+        </button>
+    {% endif %}
+
+    {% else %}
+        <p>Your cart is empty 🛒</p>
+        <a class="link" href="/">Continue Shopping</a>
+    {% endif %}
+</div>
+
+</body>
+</html>

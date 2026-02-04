@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Wishlist | Mall SKS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+</head>
+<body>
+
+{% include "header.html" %}
+
+<div class="container">
+    <h2>My Wishlist ❤️</h2>
+
+    <div class="products">
+
+        {% for product in products %}
+        <div class="card">
+            <img src="{{ product.image }}">
+            <h3>{{ product.name }}</h3>
+            <p>₹{{ product.price }}</p>
+
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <a href="/add/{{ product.id }}" class="card-btn">
+                    Add to Cart
+                </a>
+
+                <a href="/wishlist/remove/{{ product.id }}"
+                   class="card-btn"
+                   style="background:#444;">
+                    Remove
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    {% if products|length == 0 %}
+        <p style="text-align:center; margin-top:40px;">
+            Your wishlist is empty 😢
+        </p>
+    {% endif %}
+</div>
+
+{% include "footer.html" %}
+</body>
+</html>

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}My Orders{% endblock %}
+
+{% block content %}
+
+<h3 class="fw-bold mb-4">My Orders</h3>
+
+{% if orders %}
+
+<div class="row g-3">
+
+{% for order in orders %}
+<div class="col-6 col-md-4 col-lg-3">
+    <a href="/order/{{ order.id }}" style="text-decoration:none">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            {% if order.product and order.product.image %}
+            <img src="{{ url_for('static', filename=order.product.image) }}"
+                 class="card-img-top"
+                 style="height:200px; object-fit:cover;">
+            {% else %}
+            <div class="bg-light d-flex align-items-center justify-content-center"
+                 style="height:200px">
+                 No Image
+            </div>
+            {% endif %}
+
+            <div class="card-body">
+
+                <div class="fw-semibold text-dark">
+                    {{ order.product.name if order.product else "Product missing" }}
+                </div>
+
+                <div class="text-muted small">
+                    Order {{ order.order_id }}
+                </div>
+
+                <div class="pink fw-bold mt-1">
+                    ₹{{ order.product.price if order.product else "-" }}
+                </div>
+
+            </div>
+        </div>
+
+    </a>
+</div>
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="text-center mt-5">
+    <h5>No Orders Yet 😄</h5>
+    <a href="/" class="btn btn-pink mt-3">Start Shopping</a>
+</div>
+
+{% endif %}
+
+{% endblock %}

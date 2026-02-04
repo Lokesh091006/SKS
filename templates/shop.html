@@ -1,0 +1,69 @@
+<div class="shop-layout">
+
+  <!-- LEFT FILTER -->
+  <div class="filters">
+
+    <form method="get">
+
+      <h3>Filters</h3>
+
+      <!-- PRICE -->
+      <label>Price</label>
+      <input type="number" name="min" placeholder="Min">
+      <input type="number" name="max" placeholder="Max">
+
+      <!-- COLOR -->
+      <label>Color</label>
+      <select name="color">
+        <option value="">Any</option>
+        <option>Black</option>
+        <option>Blue</option>
+        <option>White</option>
+        <option>Red</option>
+      </select>
+
+      <!-- TYPE -->
+      <label>Type</label>
+      <select name="type">
+        <option value="">All</option>
+        <option>Jeans</option>
+        <option>Shirt</option>
+        <option>Tshirt</option>
+        <option>Dress</option>
+      </select>
+
+      <!-- CATEGORY -->
+      <label>Section</label>
+      <select name="category">
+        <option value="">All</option>
+        <option value="men">Men</option>
+        <option value="women">Women</option>
+        <option value="kids">Kids</option>
+      </select>
+
+      <!-- SORT -->
+      <label>Sort</label>
+      <select name="sort">
+        <option value="">Default</option>
+        <option value="low">Price Low → High</option>
+        <option value="high">Price High → Low</option>
+        <option value="az">A → Z</option>
+      </select>
+
+      <button type="submit">Apply Filters</button>
+
+    </form>
+  </div>
+
+  <!-- RIGHT PRODUCTS -->
+  <div class="products">
+    {% for p in products %}
+      <div class="card">
+        <img src="/static/{{p.image}}">
+        <h4>{{p.name}}</h4>
+        <p>₹{{p.price}}</p>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>

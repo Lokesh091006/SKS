@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Set Username | Mall SKS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    /* ===== RESET ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      background: #f5f5f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== CONTAINER ===== */
+    .username-container {
+      background: #fff;
+      width: 100%;
+      max-width: 420px;
+      padding: 32px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+
+    /* ===== LOGO ===== */
+    .logo {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .logo .mall { color: #ff3f6c; }
+    .logo .sks { color: #111; }
+
+    /* ===== TEXT ===== */
+    h2 {
+      margin-top: 10px;
+      margin-bottom: 6px;
+      font-size: 22px;
+      color: #282c3f;
+    }
+
+    p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 22px;
+    }
+
+    /* ===== INPUT ===== */
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      outline: none;
+      margin-bottom: 18px;
+      transition: border 0.2s;
+    }
+
+    input:focus {
+      border-color: #ff3f6c;
+    }
+
+    /* ===== BUTTON ===== */
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #ff3f6c;
+      border: none;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #e73362;
+    }
+
+    /* ===== SMALL NOTE ===== */
+    .note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #777;
+    }
+
+    /* ===== MOBILE ===== */
+    @media (max-width: 480px) {
+      .username-container {
+        box-shadow: none;
+        border-radius: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="username-container">
+
+    <div class="logo">
+      <span class="mall">Mall</span> <span class="sks">SKS</span>
+    </div>
+
+    <h2>Set your username</h2>
+    <p>This name will be visible on your profile</p>
+
+    {% if error %}
+  <p style="color:red; margin-bottom:10px;">{{ error }}</p>
+{% endif %}
+
+
+    <form method="post" action="/set-username">
+      <input
+        type="text"
+        name="username"
+        placeholder="Enter username"
+        required
+      >
+      <button type="submit">Continue</button>
+    </form>
+
+    <div class="note">
+      You can change this later in profile settings
+    </div>
+
+  </div>
+
+</body>
+</html>

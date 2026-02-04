@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | Mall SKS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .auth-container {
+            min-height: 80vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .auth-box {
+            width: 100%;
+            max-width: 380px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        .auth-box input {
+            width: 100%;
+            padding: 14px;
+            margin: 15px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        .auth-box button {
+            width: 100%;
+            padding: 14px;
+            background: #ff3f6c;
+            color: #fff;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+{% include "header.html" %}
+
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>Login / Signup</h2>
+        <p>Enter your mobile number to continue</p>
+
+        <!-- 🔥 PURE FORM SUBMIT -->
+        <form method="post" action="/send-otp">
+            <input
+                type="tel"
+                name="mobile"
+                placeholder="Enter 10 digit mobile number"
+                pattern="[0-9]{10}"
+                inputmode="numeric"
+                required
+            >
+
+            <!-- 🔥 MUST BE submit -->
+            <button type="submit">Send OTP</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
