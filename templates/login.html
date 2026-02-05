@@ -15,62 +15,65 @@
 <input type="tel" id="phone" placeholder="+91XXXXXXXXXX">
 <button onclick="sendOTP()">Send OTP</button>
 
-<div id="recaptcha-container" style="margin-top:20px;"></div>
+<input type="text" id="otp" placeholder="Enter OTP">
+<button onclick="verifyOTP()">Verify OTP</button>
+
+<div id="recaptcha-container"></div>
+
 
 <br><br>
 
 <input type="text" id="otp" placeholder="Enter OTP">
 <button onclick="verifyOTP()">Verify OTP</button>
 
-<script>
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2-Y2uenONOhTPyMyhpaDJOCPHzbFGAgU",
   authDomain: "sks-mall.firebaseapp.com",
   projectId: "sks-mall",
-  storageBucket: "sks-mall.firebasestorage.app",
-  messagingSenderId: "240999025188",
-  appId: "1:240999025188:web:e813bebcd10eb43f4ba6b1",
-  measurementId: "G-7RRFQYP0RH"
+  appId: "1:240999025188:web:e813bebcd10eb43f4ba6b1"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
-  'recaptcha-container',
-  { size: 'normal' },
-  auth
-);
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+  size: 'normal',
+});
 
-recaptchaVerifier.render();
+window.sendOTP = function () {
+  const phone = document.getElementById("phone").value;
 
-function sendOTP() {
-  const number = document.getElementById("phone").value;
-
-  auth.signInWithPhoneNumber(number, window.recaptchaVerifier)
-  .then(function(cr) {
-      window.confirmationResult = cr;
-      alert("OTP Sent");
-  })
-  .catch(e => alert(e.message));
+  signInWithPhoneNumber(auth, phone, window.recaptchaVerifier)
+    .then((confirmationResult) => {
+      window.confirmationResult = confirmationResult;
+      alert("OTP sent");
+    })
+    .catch((error) => {
+      console.log(error);
+      alert(error.message);
+    });
 }
 
-function verifyOTP() {
+window.verifyOTP = function () {
   const code = document.getElementById("otp").value;
 
-  confirmationResult.confirm(code)
-  .then(r => {
-      fetch("/firebase-login", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({mobile: r.user.phoneNumber})
-      }).then(()=>window.location="/");
-  })
-  .catch(()=>alert("Wrong OTP"));
+  window.confirmationResult.confirm(code)
+    .then((result) => {
+      alert("Login success");
+    })
+    .catch((error) => {
+      alert("Wrong OTP");
+    });
 }
 
 </script>
+
 
 </body>
 </html>
