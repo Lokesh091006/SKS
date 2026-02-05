@@ -7,30 +7,23 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
 </head>
-<body>
-<h1>FIREBASE VERSION LOGIN</h1>
 
+<body>
+
+<h1>FIREBASE VERSION LOGIN</h1>
 <h2>Login with Mobile OTP</h2>
 
-<input type="tel" id="phone" placeholder="+91XXXXXXXXXX">
+<input type="tel" id="phone" placeholder="Enter 10 digit number">
 <button onclick="sendOTP()">Send OTP</button>
-
-<input type="text" id="otp" placeholder="Enter OTP">
-<button onclick="verifyOTP()">Verify OTP</button>
-
-<div id="recaptcha-container"></div>
-
 
 <br><br>
 
 <input type="text" id="otp" placeholder="Enter OTP">
 <button onclick="verifyOTP()">Verify OTP</button>
 
-<script type="module">
+<div id="recaptcha-container"></div>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, RecaptchaVerifier, signInWithPhoneNumber }
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+<script>
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2-Y2uenONOhTPyMyhpaDJOCPHzbFGAgU",
@@ -39,27 +32,24 @@ const firebaseConfig = {
   appId: "1:240999025188:web:e813bebcd10eb43f4ba6b1"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+firebase.initializeApp(firebaseConfig);
 
-window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-  size: 'normal',
-});
+// recaptcha
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+  'recaptcha-container',
+  { size: 'normal' }
+);
 
 function sendOTP() {
   let phone = document.getElementById("phone").value.trim();
 
-  // remove spaces
   phone = phone.replace(/\s+/g, '');
 
-  // auto add +91 if not present
   if (!phone.startsWith("+")) {
     phone = "+91" + phone;
   }
 
-  const appVerifier = window.recaptchaVerifier;
-
-  firebase.auth().signInWithPhoneNumber(phone, appVerifier)
+  firebase.auth().signInWithPhoneNumber(phone, window.recaptchaVerifier)
     .then(function (confirmationResult) {
       window.confirmationResult = confirmationResult;
       alert("OTP sent");
@@ -70,21 +60,19 @@ function sendOTP() {
     });
 }
 
-
-window.verifyOTP = function () {
+function verifyOTP() {
   const code = document.getElementById("otp").value;
 
   window.confirmationResult.confirm(code)
-    .then((result) => {
+    .then(function () {
       alert("Login success");
     })
-    .catch((error) => {
+    .catch(function () {
       alert("Wrong OTP");
     });
 }
 
 </script>
-
 
 </body>
 </html>
