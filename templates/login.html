@@ -46,19 +46,30 @@ window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
   size: 'normal',
 });
 
-window.sendOTP = function () {
-  const phone = document.getElementById("phone").value;
+function sendOTP() {
+  let phone = document.getElementById("phone").value.trim();
 
-  signInWithPhoneNumber(auth, phone, window.recaptchaVerifier)
-    .then((confirmationResult) => {
+  // remove spaces
+  phone = phone.replace(/\s+/g, '');
+
+  // auto add +91 if not present
+  if (!phone.startsWith("+")) {
+    phone = "+91" + phone;
+  }
+
+  const appVerifier = window.recaptchaVerifier;
+
+  firebase.auth().signInWithPhoneNumber(phone, appVerifier)
+    .then(function (confirmationResult) {
       window.confirmationResult = confirmationResult;
       alert("OTP sent");
     })
-    .catch((error) => {
-      console.log(error);
+    .catch(function (error) {
       alert(error.message);
+      console.log(error);
     });
 }
+
 
 window.verifyOTP = function () {
   const code = document.getElementById("otp").value;
