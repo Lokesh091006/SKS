@@ -1,7 +1,71 @@
-<div id="loginModal" class="modal">
-  <div class="modal-content">
-    <h3>Enter Mobile Number</h3>
-    <input type="text" placeholder="10-digit mobile number">
-    <button>Continue</button>
-  </div>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
+</head>
+<body>
+
+<h2>Login with Mobile OTP</h2>
+
+<input type="tel" id="phone" placeholder="+91XXXXXXXXXX">
+<button onclick="sendOTP()">Send OTP</button>
+
+<div id="recaptcha-container" style="margin-top:20px;"></div>
+
+<br><br>
+
+<input type="text" id="otp" placeholder="Enter OTP">
+<button onclick="verifyOTP()">Verify OTP</button>
+
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD2-Y2uenONOhTPyMyhpaDJOCPHzbFGAgU",
+  authDomain: "sks-mall.firebaseapp.com",
+  projectId: "sks-mall"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+  'recaptcha-container',
+  { size: 'normal' },
+  auth
+);
+
+recaptchaVerifier.render();
+
+function sendOTP() {
+  const number = document.getElementById("phone").value;
+
+  auth.signInWithPhoneNumber(number, window.recaptchaVerifier)
+  .then(function(cr) {
+      window.confirmationResult = cr;
+      alert("OTP Sent");
+  })
+  .catch(e => alert(e.message));
+}
+
+function verifyOTP() {
+  const code = document.getElementById("otp").value;
+
+  confirmationResult.confirm(code)
+  .then(r => {
+      fetch("/firebase-login", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({mobile: r.user.phoneNumber})
+      }).then(()=>window.location="/");
+  })
+  .catch(()=>alert("Wrong OTP"));
+}
+
+</script>
+
+</body>
+</html>

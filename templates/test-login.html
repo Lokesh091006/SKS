@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>OTP Test</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+</head>
+
+<body>
+
+<h2>OTP Test</h2>
+
+<input id="phone" placeholder="+91XXXXXXXXXX">
+<button onclick="send()">Send OTP</button>
+
+<div id="recaptcha-container"></div>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyD2-Y2uenONOhTPyMyhpaDJOCPHzbFGAgU",
+  authDomain: "sks-mall.firebaseapp.com",
+  projectId: "sks-mall"
+});
+
+const auth = firebase.auth();
+
+window.recaptchaVerifier =
+  new firebase.auth.RecaptchaVerifier(
+    'recaptcha-container',
+    { size: 'normal' },
+    auth
+  );
+
+recaptchaVerifier.render();
+
+function send() {
+  auth.signInWithPhoneNumber(
+    document.getElementById("phone").value,
+    window.recaptchaVerifier
+  ).then(r => alert("OTP sent"));
+}
+</script>
+
+</body>
+</html>

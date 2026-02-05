@@ -76,22 +76,27 @@ def home():
     return render_template("home.html", products=products)
 
 # ---------- PROFILE ----------
-
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login")
 def login():
-    if request.method == "POST":
-        mobile = request.form["mobile"]
-
-        user = User.query.filter_by(mobile=mobile).first()
-        if not user:
-            user = User(mobile=mobile, username="Guest")
-            db.session.add(user)
-            db.session.commit()
-
-        session["user_id"] = user.id
-        return redirect("/")
-
     return render_template("login.html")
+
+
+
+
+@app.route("/firebase-login", methods=["POST"])
+def firebase_login():
+    mobile = request.json["mobile"]
+
+    user = User.query.filter_by(mobile=mobile).first()
+
+    if not user:
+        user = User(mobile=mobile, username="Guest")
+        db.session.add(user)
+        db.session.commit()
+
+    session["user_id"] = user.id
+    return {"status": "ok"}
+
 
 @app.route("/test")
 def test():
