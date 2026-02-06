@@ -2709,48 +2709,20 @@ body {
 .results-area {
     flex: 1;
 }
-.search-layout {
-  display:flex;
-  gap:30px;
+@media (max-width:900px) {
+  .nav-right .search-icon {
+    display: block !important;
+  }
 }
-
-.filter-box {
-  width:260px;
-  background:white;
-  padding:20px;
-  border:1px solid #eee;
-}
-.search-icon {
-  cursor: pointer;
-  font-size: 20px;
-  padding: 8px;
-}
+/* ===== SEARCH OVERLAY SHOW FIX ===== */
 .search-overlay {
   display: none;
-  position: fixed;
-  top: 70px;
-  left: 0;
-  width: 100%;
-  background: white;
-  z-index: 9999;
-  padding: 20px;
 }
 
 .search-overlay.show {
   display: block;
 }
-.search-box {
-  max-width: 600px;
-  margin: auto;
-  position: relative;
+.search-results {
+  display: block;
 }
 
-.search-results {
-  position: absolute;
-  width: 100%;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  margin-top: 8px;
-  z-index: 10000;
-}

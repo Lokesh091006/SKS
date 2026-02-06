@@ -98,9 +98,7 @@ def firebase_login():
     return {"status": "ok"}
 
 
-@app.route("/test")
-def test():
-    return "OK"
+
 
 @app.route("/profile")
 def profile():
@@ -109,9 +107,7 @@ def profile():
         return redirect(url_for("home"))
     return render_template("profile.html")
 
-@app.route("/db-test")
-def db_test():
-    return str(Product.query.count())
+
 
 
 # ---------- SEND OTP ----------
@@ -253,44 +249,46 @@ def category(name):
     return render_template("category.html", products=products, category=name)
 
 # ---------- SEARCH ----------
+# ---------- SEARCH ----------
 @app.route("/search")
 def search():
 
-
-    query = request.args.get("q", "")
+    query = request.args.get("q", "").strip()
+    category = request.args.get("category")
     min_price = request.args.get("min_price")
     max_price = request.args.get("max_price")
     color = request.args.get("color")
     type_ = request.args.get("type")
     sort = request.args.get("sort")
 
-    # base query
     products = Product.query
 
+    # 🔍 search text
     if query:
-
         products = products.filter(Product.name.ilike(f"%{query}%"))
 
-    
-    # ✅ price filters
-    if min_price:
+    # 🧵 category
+    if category:
+        products = products.filter(Product.category.ilike(category))
+
+    # 🎨 color
+    if color:
+        products = products.filter(Product.color.ilike(color))
+
+    # 👕 type
+    if type_:
+        products = products.filter(Product.type.ilike(type_))
+
+    # 💰 price
+    if min_price and min_price.isdigit():
         products = products.filter(Product.price >= int(min_price))
 
-    if max_price:
+    if max_price and max_price.isdigit():
         products = products.filter(Product.price <= int(max_price))
 
-    # ✅ color filter (if column exists)
-    if color:
-        products = products.filter(Product.color == color)
-
-    # ✅ type/category filter (if column exists)
-    if type_:
-        products = products.filter(Product.type == type_)
-
-    # ✅ sorting
+    # ↕ sort
     if sort == "low":
         products = products.order_by(Product.price.asc())
-
     elif sort == "high":
         products = products.order_by(Product.price.desc())
 
@@ -317,7 +315,7 @@ def live_search():
         query = query.filter(Product.name.ilike(f"%{w}%"))
 
     products = query.limit(5).all()
-
+    print(products)
     return jsonify([
         {
             "id": p.id,

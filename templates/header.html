@@ -26,8 +26,6 @@
     <!-- SEARCH ICON -->
     <div class="search-icon" onclick="toggleSearch()">🔍</div>
 
-
-
     {% if session.get("username") %}
       <span class="nav-user desktop-only">👤 {{ session["username"] }}</span>
       <a class="desktop-only" href="/logout">Logout</a>
@@ -42,7 +40,7 @@
 
 </header>
 
-<!-- SEARCH BAR -->
+<!-- SEARCH OVERLAY -->
 <div id="searchBar" class="search-overlay">
   <div class="search-box">
     <input type="text" id="searchInput" placeholder="Search products...">
@@ -77,19 +75,24 @@
 </div>
 
 <script>
+
+/* ===== MENU ===== */
 function toggleMenu() {
   document.getElementById("mobileMenu").classList.toggle("show");
 }
 
+/* ===== SEARCH OVERLAY ===== */
 function toggleSearch() {
   const bar = document.getElementById("searchBar");
   bar.classList.toggle("show");
+
   setTimeout(() => {
     const inp = document.getElementById("searchInput");
     if (inp) inp.focus();
-  }, 150);
+  }, 120);
 }
 
+/* ===== LOGIN ===== */
 function openLogin() {
   document.getElementById("loginModal").style.display = "flex";
 }
@@ -99,21 +102,26 @@ window.onclick = function(e) {
   if (e.target === modal) modal.style.display = "none";
 };
 
-/* ✅ LIVE SEARCH */
+
+/* ===== LIVE SEARCH ===== */
 document.addEventListener("DOMContentLoaded", function() {
 
   const input = document.getElementById("searchInput");
   const resultsBox = document.getElementById("searchResults");
+  const searchBar = document.getElementById("searchBar");
 
-  if (!input) return;
+  if (!input || !resultsBox) return;
+
+  resultsBox.style.display = "none";
 
   input.addEventListener("input", function() {
 
     const q = this.value.trim();
-    console.log("typing:", q);   // debug log
+    console.log("typing:", q);
 
     if (q.length < 2) {
       resultsBox.innerHTML = "";
+      resultsBox.style.display = "none";
       return;
     }
 
@@ -125,6 +133,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (!data.length) {
           resultsBox.innerHTML = "<div class='no-result'>No results</div>";
+          resultsBox.style.display = "block";
           return;
         }
 
@@ -142,10 +151,21 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         resultsBox.innerHTML = html;
+        resultsBox.style.display = "block";
 
       })
       .catch(err => console.log("LIVE SEARCH ERROR:", err));
   });
 
+  /* click outside overlay closes */
+  if (searchBar) {
+    searchBar.addEventListener("click", e => {
+      if (e.target.id === "searchBar") {
+        searchBar.classList.remove("show");
+      }
+    });
+  }
+
 });
+
 </script>
