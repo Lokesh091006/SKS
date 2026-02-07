@@ -46,6 +46,8 @@ with app.app_context():
             Product(name="Men Jacket", price=1799, category="men", image="images/men3.jpg"),
             Product(name="Women Dress", price=1499, category="women", image="images/women1.jpg"),
             Product(name="Running Shoes", price=1999, category="shoes", image="images/shoes1.jpg"),
+            Product(name="Men Hoodie", price=1999, category="men", image="images/men4.jpg"),
+
         ]
         db.session.add_all(sample_products)
         db.session.commit()
