@@ -197,7 +197,7 @@ def wishlist():
     wishlist_products = [p for p in Product.query.all() if p.id in wishlist_ids]
     return render_template("wishlist.html", products=wishlist_products)
 
-@app.route("/wishlist/<int:product_id>")
+@app.route("/add-to-wishlist/<int:product_id>")
 def add_to_wishlist(product_id):
     if "wishlist" not in session:
         session["wishlist"] = []
@@ -331,13 +331,6 @@ def live_search():
 
 
 
-@app.route("/add/<int:product_id>")
-def add_to_cart(product_id):
-    cart = session.get("cart", {})
-    pid = str(product_id)
-    cart[pid] = cart.get(pid, 0) + 1
-    session["cart"] = cart
-    return redirect(url_for("cart"))
 
 @app.route("/cart")
 def cart():
@@ -360,6 +353,17 @@ def cart():
     final_amount = total - discount
     session["total_after_coupon"] = final_amount
     return render_template("cart.html", cart_items=cart_items, total=total, discount=discount, final_amount=final_amount)
+
+@app.route("/add/<int:product_id>")
+def add_to_cart(product_id):
+    cart = session.get("cart", {})
+    pid = str(product_id)
+    cart[pid] = cart.get(pid, 0) + 1
+    session["cart"] = cart
+    return redirect(url_for("cart"))
+
+
+
 
 @app.route("/increase/<int:product_id>")
 def increase(product_id):

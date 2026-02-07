@@ -2782,3 +2782,58 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+ .card-btn {
+            background-color: #ff4081;
+            color: #fff;
+            margin: 3px;
+ }
+.card-btn:hover {
+            background-color: #e73370;
+}
+  .card-btn, .btn-buy {
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+}
+.cart-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.cart-table th, .cart-table td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
+}
+
+.product-info {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* GAP between image and name */
+}
+
+.product-image img {
+    width: 80px;   /* adjust size */
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.qty-btn {
+    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border: none;
+    cursor: pointer;
+    margin: 0 5px;
+    border-radius: 4px;
+}
+
+.qty {
+    font-weight: bold;
+}

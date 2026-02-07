@@ -54,12 +54,13 @@
         <div class="product-buttons">
 
             <!-- WISHLIST -->
-            <a href="/add-to-wishlist/{{ product.id }}" class="btn-wishlist">
-                ❤️ Wishlist
+          
+            <a href="{{ url_for('add_to_wishlist', product_id=product.id) }}" class="card-btn">
+                 Add to Wishlist
             </a>
 
             <!-- CART -->
-            <a href="/add/{{ product.id }}" class="btn-cart">
+            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn-cart">
                 🛒 Add to Cart
             </a>
 
