@@ -141,7 +141,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         data.forEach(p => {
           html += `
-          <div class="search-item" onclick="location.href='/product/${p.id}'">
+        <div class="search-item" onclick="window.location='/product/${p.id}'">
+
             <img src="/static/${p.image || 'images/noimg.png'}">
             <div>
               <div>${p.name}</div>
@@ -167,5 +168,11 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
 });
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    window.location = "/search?q=" + encodeURIComponent(input.value);
+  }
+});
+
 
 </script>

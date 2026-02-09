@@ -10,7 +10,7 @@ from models.user import User
 from models.address import Address
 from models.order import Order
 
-
+from sqlalchemy import or_
 
 
 
@@ -247,15 +247,51 @@ def my_orders():
 # ---------- CATEGORY ----------
 @app.route("/category/<name>")
 def category(name):
-    products = Product.query.filter_by(category=name).all()
-    return render_template("category.html", products=products, category=name)
+
+    q = request.args.get("q")
+    min_price = request.args.get("min")
+    max_price = request.args.get("max")
+    color = request.args.get("color")
+    type_ = request.args.get("type")
+    sort = request.args.get("sort")
+
+    query = Product.query.filter_by(category=name)
+
+    if q:
+        query = query.filter(Product.name.ilike(f"%{q}%"))
+
+    if type_:
+        query = query.filter_by(type=type_)
+
+    if color:
+        query = query.filter_by(color=color)
+
+    if min_price:
+        query = query.filter(Product.price >= int(min_price))
+
+    if max_price:
+        query = query.filter(Product.price <= int(max_price))
+
+    if sort == "low":
+        query = query.order_by(Product.price.asc())
+    elif sort == "high":
+        query = query.order_by(Product.price.desc())
+    elif sort == "az":
+        query = query.order_by(Product.name.asc())
+
+    products = query.all()
+
+    return render_template("shop.html", products=products)
+
 
 # ---------- SEARCH ----------
 # ---------- SEARCH ----------
+
+
 @app.route("/search")
 def search():
 
-    query = request.args.get("q", "").strip()
+    q = request.args.get("q", "").strip()
     category = request.args.get("category")
     min_price = request.args.get("min_price")
     max_price = request.args.get("max_price")
@@ -265,13 +301,24 @@ def search():
 
     products = Product.query
 
-    # 🔍 search text
-    if query:
-        products = products.filter(Product.name.ilike(f"%{query}%"))
+    # 🔍 TEXT SEARCH — smart word matching
+    if q:
+        words = q.lower().split()
 
-    # 🧵 category
+        for w in words:
+            base = w.rstrip("s")   # hoodie / hoodies both match
+            like = f"%{base}%"
+
+            products = products.filter(or_(
+                Product.name.ilike(like),
+                Product.category.ilike(like),
+                Product.type.ilike(like)
+            ))
+
+    # 🧵 category filter
     if category:
-        products = products.filter(Product.category.ilike(category))
+        products = products.filter(Product.category.ilike(f"%{category}%"))
+
 
     # 🎨 color
     if color:
@@ -299,25 +346,31 @@ def search():
     return render_template(
         "search.html",
         products=results,
-        query=query
+        query=q
     )
+
 
 
 @app.route("/live-search")
 def live_search():
+
     q = request.args.get("q", "").strip()
 
     if not q:
         return jsonify([])
 
-    words = q.split()
+    words = q.lower().split()
 
-    query = Product.query
+    products = Product.query
+
     for w in words:
-        query = query.filter(Product.name.ilike(f"%{w}%"))
+        base = w.rstrip("s")
+        products = products.filter(
+            Product.name.ilike(f"%{base}%")
+        )
 
-    products = query.limit(5).all()
-    print(products)
+    products = products.limit(6).all()
+
     return jsonify([
         {
             "id": p.id,
@@ -327,6 +380,7 @@ def live_search():
         }
         for p in products
     ])
+
 
 
 
@@ -517,10 +571,23 @@ def shop():
     query = Product.query
 
     if q:
-        query = query.filter(Product.name.ilike(f"%{q}%"))
+
+        words = q.lower().split()
+
+        for w in words:
+
+             like = f"%{w.rstrip('s')}%"
+             query = query.filter(or_(
+             Product.name.ilike(like),
+             Product.category.ilike(like),
+             Product.type.ilike(like)
+        ))
 
     if category:
-        query = query.filter_by(category=category)
+
+        query = query.filter(Product.category.ilike(f"%{category}%"))
+
+      
 
     if type_:
         query = query.filter_by(type=type_)

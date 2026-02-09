@@ -1,69 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shop | Mall SKS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+}
+
+/* TOP BAR */
+.shop-topbar{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:15px 20px;
+    font-size:22px;
+    font-weight:bold;
+}
+
+/* FILTER ICON */
+.filter-toggle{
+    font-size:26px;
+    cursor:pointer;
+    background:#eee;
+    padding:6px 12px;
+    border-radius:8px;
+}
+
+/* LAYOUT */
+.shop-layout{
+    display:flex;
+}
+
+/* FILTER SIDEBAR */
+.filters{
+    width:260px;
+    background:#f7f7f7;
+    padding:20px;
+    border-right:1px solid #ddd;
+    transition:0.3s;
+}
+
+.filters.hide{
+    transform:translateX(-100%);
+    position:absolute;
+    z-index:1000;
+}
+
+/* FILTER FORM */
+.filters label{
+    display:block;
+    margin-top:12px;
+    font-weight:600;
+}
+
+.filters input,
+.filters select{
+    width:100%;
+    padding:8px;
+    margin-top:5px;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+
+.filters button{
+    margin-top:15px;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    background:black;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+/* PRODUCTS GRID */
+.products{
+    flex:1;
+    padding:20px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:12px;
+    box-shadow:0 0 10px rgba(0,0,0,0.08);
+    text-align:center;
+}
+
+.card img{
+    width:100%;
+    height:220px;
+    object-fit:cover;
+    border-radius:10px;
+}
+
+.view-btn{
+    display:inline-block;
+    margin-top:8px;
+    padding:8px 12px;
+    background:black;
+    color:white;
+    border-radius:8px;
+    text-decoration:none;
+}
+
+/* MOBILE */
+@media(max-width:900px){
+    .filters{
+        position:absolute;
+        left:0;
+        top:0;
+        height:100%;
+        z-index:1000;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+{% include "header.html" %}
+
+<!-- TOP BAR -->
+<div class="shop-topbar">
+    <div class="filter-toggle" onclick="toggleFilters()">☰</div>
+    Filters
+</div>
+
 <div class="shop-layout">
 
-  <!-- LEFT FILTER -->
-  <div class="filters">
+    <!-- LEFT FILTER -->
+    <div class="filters" id="filterBox">
 
-    <form method="get">
+       <form method="get">
 
-      <h3>Filters</h3>
 
-      <!-- PRICE -->
-      <label>Price</label>
-      <input type="number" name="min" placeholder="Min">
-      <input type="number" name="max" placeholder="Max">
 
-      <!-- COLOR -->
-      <label>Color</label>
-      <select name="color">
-        <option value="">Any</option>
-        <option>Black</option>
-        <option>Blue</option>
-        <option>White</option>
-        <option>Red</option>
-      </select>
+            <label>Search</label>
+            <input type="text" name="q" value="{{ request.args.get('q','') }}">
 
-      <!-- TYPE -->
-      <label>Type</label>
-      <select name="type">
-        <option value="">All</option>
-        <option>Jeans</option>
-        <option>Shirt</option>
-        <option>Tshirt</option>
-        <option>Dress</option>
-      </select>
 
-      <!-- CATEGORY -->
-      <label>Section</label>
-      <select name="category">
-        <option value="">All</option>
-        <option value="men">Men</option>
-        <option value="women">Women</option>
-        <option value="kids">Kids</option>
-      </select>
+            <label>Price</label>
+            <input type="number" name="min" placeholder="Min">
+            <input type="number" name="max" placeholder="Max">
 
-      <!-- SORT -->
-      <label>Sort</label>
-      <select name="sort">
-        <option value="">Default</option>
-        <option value="low">Price Low → High</option>
-        <option value="high">Price High → Low</option>
-        <option value="az">A → Z</option>
-      </select>
+            <label>Category</label>
+            <select name="category">
+<option value="">All</option>
 
-      <button type="submit">Apply Filters</button>
+<option value="men"
+{% if request.args.get('category') == 'men' %}selected{% endif %}>
+Men
+</option>
 
-    </form>
-  </div>
+<option value="women"
+{% if request.args.get('category') == 'women' %}selected{% endif %}>
+Women
+</option>
 
-  <!-- RIGHT PRODUCTS -->
-  <div class="products">
-    {% for p in products %}
-      <div class="card">
-        <img src="/static/{{p.image}}">
-        <h4>{{p.name}}</h4>
-        <p>₹{{p.price}}</p>
-      </div>
-    {% endfor %}
-  </div>
+<option value="kids"
+{% if request.args.get('category') == 'kids' %}selected{% endif %}>
+Kids
+</option>
+
+<option value="sarees"
+{% if request.args.get('category') == 'sarees' %}selected{% endif %}>
+Sarees
+</option>
+
+</select>
+
+
+            <label>Sort</label>
+            <select name="sort">
+                <option value="">Default</option>
+                <option value="low">Low → High</option>
+                <option value="high">High → Low</option>
+            </select>
+
+            <button type="submit">Apply</button>
+
+        </form>
+    </div>
+
+    <!-- RIGHT PRODUCTS -->
+    <div class="products">
+
+        {% for p in products %}
+        <div class="card">
+            <a href="{{ url_for('product_page', pid=p.id) }}">
+                <img src="{{ url_for('static', filename=p.image) }}">
+            </a>
+
+            <h4>{{ p.name }}</h4>
+            <b>₹{{ p.price }}</b>
+
+            <br>
+            <a href="{{ url_for('product_page', pid=p.id) }}" class="view-btn">
+                View Product
+            </a>
+        </div>
+        {% endfor %}
+
+    </div>
 
 </div>
+
+<script>
+function toggleFilters(){
+  document.getElementById("filterBox").classList.toggle("show");
+}
+</script>
+
+
+{% include "footer.html" %}
+
+</body>
+</html>
