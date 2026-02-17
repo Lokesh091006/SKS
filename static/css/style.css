@@ -3015,3 +3015,157 @@ body {
   position: absolute;
   left: 0;
   right:
+}
+.product-card img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  image-rendering: auto;
+}
+/* SIZE */
+.size-box {
+    margin: 10px 0;
+}
+
+.size-box select {
+    padding: 6px;
+    border-radius: 5px;
+}
+
+.size-box {
+    margin: 15px 0;
+}
+
+.sizes {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.size {
+    border: 1px solid #ccc;
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+    font-weight: 500;
+}
+
+.size:hover {
+    border-color: #ff3f6c;
+    color: #ff3f6c;
+}
+
+.size.active {
+    background: #ff3f6c;
+    color: white;
+    border-color: #ff3f6c;
+}
+.slider {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.slides {
+    display: flex;
+    gap: 10px;
+}
+
+.slides img {
+    width: 100%;
+    max-width: 300px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.sizes {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.size {
+    padding: 8px 14px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.size.active {
+    background: #ff3f6c;
+    color: white;
+    border: none;
+}
+.cart-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.cart-row {
+    border-bottom: 1px solid #eee;
+}
+
+.product-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.cart-img {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.product-info h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.size-text {
+    color: gray;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* Quantity buttons */
+.qty-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.qty-box a {
+    background: #f1f1f1;
+    padding: 5px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    color: black;
+}
+
+.qty-box span {
+    font-weight: bold;
+}
+
+/* PRICE BOX */
+.price-box {
+    background: #fff5f7;
+    padding: 20px;
+    border-radius: 12px;
+    width: 300px;
+    margin-top: 30px;
+}
+
+.checkout-btn {
+    margin-top: 20px;
+    background: #ff3f6c;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    apparently:inline-block;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}

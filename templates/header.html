@@ -1,3 +1,6 @@
+
+
+
 <header class="navbar">
 
   <!-- LEFT : HAMBURGER -->
@@ -28,6 +31,12 @@
 
     {% if session.get("username") %}
       <span class="nav-user desktop-only">👤 {{ session["username"] }}</span>
+
+      <!-- 👑 ADMIN LINK -->
+      {% if session.get("role") == "admin" %}
+        <a href="/admin/dashboard" class="desktop-only">👑 Admin</a>
+      {% endif %}
+
       <a class="desktop-only" href="/logout">Logout</a>
     {% else %}
       <a class="desktop-only" href="javascript:void(0)" onclick="openLogin()">Profile</a>
@@ -57,6 +66,12 @@
 
   {% if session.get("username") %}
     <a href="/profile">Profile</a>
+
+    <!-- 👑 ADMIN LINK (MOBILE) -->
+    {% if session.get("role") == "admin" %}
+      <a href="/admin/dashboard">👑 Admin</a>
+    {% endif %}
+
     <a href="/logout">Logout</a>
   {% else %}
     <a href="javascript:void(0)" onclick="openLogin()">Login</a>
@@ -102,7 +117,6 @@ window.onclick = function(e) {
   if (e.target === modal) modal.style.display = "none";
 };
 
-
 /* ===== LIVE SEARCH ===== */
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -117,7 +131,6 @@ document.addEventListener("DOMContentLoaded", function() {
   input.addEventListener("input", function() {
 
     const q = this.value.trim();
-    console.log("typing:", q);
 
     if (q.length < 2) {
       resultsBox.innerHTML = "";
@@ -129,8 +142,6 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(r => r.json())
       .then(data => {
 
-        console.log("results:", data);
-
         if (!data.length) {
           resultsBox.innerHTML = "<div class='no-result'>No results</div>";
           resultsBox.style.display = "block";
@@ -141,8 +152,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         data.forEach(p => {
           html += `
-        <div class="search-item" onclick="window.location='/product/${p.id}'">
-
+          <div class="search-item" onclick="window.location='/product/${p.id}'">
             <img src="/static/${p.image || 'images/noimg.png'}">
             <div>
               <div>${p.name}</div>
@@ -167,12 +177,12 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-});
-input.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    window.location = "/search?q=" + encodeURIComponent(input.value);
-  }
-});
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      window.location = "/search?q=" + encodeURIComponent(input.value);
+    }
+  });
 
+});
 
 </script>

@@ -17,36 +17,35 @@
     {% if cart_items %}
 
     <table class="cart-table">
-    <tr>
-        <th align="left">Product</th>
-        <th>Price</th>
-        <th>Quantity</th>
-        <th>Total</th>
-    </tr>
-
     {% for item in cart_items %}
-    <tr>
-        <td class="product-info">
-            <div class="cart-img">
+<tr class="cart-row">
 
-                <img src="{{ url_for('static', filename=item.product.image) }}" alt="{{ item.product.name }}">
-            </div>
-            <div class="product-name">
-                {{ item.product.name }}
-            </div>
-        </td>
+    <td class="product-info">
+        <img src="{{ url_for('static', filename=item.product.image) }}" class="cart-img">
 
-        <td align="center">₹{{ item.product.price }}</td>
+        <div>
+            <h4>{{ item.product.name }}</h4>
+            <p class="size-text">Size: {{ item.size }}</p>
+        </div>
+    </td>
 
-        <td align="center">
-            <a href="{{ url_for('decrease', product_id=item.product.id) }}" class="qty-btn">−</a>
-            <span class="qty">{{ item.qty }}</span>
-            <a href="{{ url_for('increase', product_id=item.product.id) }}" class="qty-btn">+</a>
-        </td>
+    <td>₹{{ item.product.price }}</td>
 
-        <td align="center">₹{{ item.subtotal }}</td>
-    </tr>
-    {% endfor %}
+    <td>
+        <div class="qty-box">
+           
+           <a href="{{ url_for('decrease', product_id=item.product.id, size=item.size) }}">-</a>
+
+            <span>{{ item.qty }}</span>
+            <a href="{{ url_for('increase', product_id=item.product.id, size=item.size) }}">+</a>
+        </div>
+    </td>
+
+    <td>₹{{ item.subtotal }}</td>
+
+</tr>
+{% endfor %}
+
 </table>
 
 

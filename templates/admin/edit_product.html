@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Product</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .box {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 300px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: black;
+      color: white;
+      border: none;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+  <h3>Edit Product</h3>
+
+  <form method="POST">
+    <input name="name" value="{{ product.name }}">
+    <input name="price" value="{{ product.price }}">
+    <input name="category" value="{{ product.category }}">
+
+    <button>Update</button>
+  </form>
+</div>
+
+</body>
+</html>

@@ -11,6 +11,9 @@ from models.address import Address
 from models.order import Order
 
 from sqlalchemy import or_
+from functools import wraps
+from flask import flash 
+from sqlalchemy.orm import joinedload
 
 
 
@@ -18,10 +21,11 @@ from sqlalchemy import or_
    
 
 
-# ================== APP CONFIG ==================
 app = Flask(__name__)
 
 
+UPLOAD_FOLDER = "static/uploads"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -31,10 +35,9 @@ app.secret_key = "sks_super_secret_key_123"
 
 db.init_app(app)
 
-# ================== FAST2SMS CONFIG ==================
+
 FAST2SMS_API_KEY = "U41D0zVLyOfXbVbR1yI95pqxKvcqrgNIo38ZNJ7e01O7wVn6tjAm8p4nSnNa"
 
-# ================== DB INIT + SAMPLE DATA ==================
 with app.app_context():
     
     db.create_all()
@@ -52,7 +55,7 @@ with app.app_context():
         db.session.add_all(sample_products)
         db.session.commit()
 
-# ================== UTILS ==================
+
 def send_sms_otp(mobile, otp):
     url = "https://www.fast2sms.com/dev/bulkV2"
     payload = {
@@ -69,19 +72,32 @@ def send_sms_otp(mobile, otp):
     print("FAST2SMS RESPONSE:", response.text)
     return response.json()
 
-# ================== ROUTES ==================
 
-# ---------- HOME ----------
+
+
 @app.route("/")
 def home():
     products = Product.query.all()
     return render_template("home.html", products=products)
 
-# ---------- PROFILE ----------
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("login.html")
+    if request.method == "POST":
+        mobile = request.form.get("mobile")
 
+        user = User.query.filter_by(mobile=mobile).first()
+
+        if not user:
+            user = User(mobile=mobile, role="user")
+            db.session.add(user)
+            db.session.commit()
+
+        session["user_id"] = user.id
+        session["role"] = user.role
+
+        return redirect("/")
+
+    return render_template("login.html")
 
 
 
@@ -112,7 +128,7 @@ def profile():
 
 
 
-# ---------- SEND OTP ----------
+
 @app.route("/send-otp", methods=["POST"])
 def send_otp():
     mobile = request.form.get("mobile")
@@ -125,7 +141,7 @@ def send_otp():
     print("DEBUG OTP:", otp)
     return redirect(url_for("verify_otp"))
 
-# ---------- VERIFY OTP ----------
+
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
     if request.method == "POST":
@@ -139,24 +155,26 @@ def verify_otp():
         if entered != saved:
             return "❌ Wrong OTP"
 
-        # OTP correct
+        
         session.pop("login_otp")
         user = User.query.filter_by(mobile=mobile).first()
 
         if not user:
-            # new user → go set username
+            
             return redirect(url_for("set_username"))
 
-        # existing user
+        
         session["username"] = user.username
         session["user_id"] = user.id
+        session["role"] = user.role
+
         session.pop("show_login", None)
         next_page = session.pop("next", url_for("home"))
         return redirect(next_page)
 
     return render_template("verify_otp.html")
 
-# ---------- SET USERNAME ----------
+
 @app.route("/set-username", methods=["GET", "POST"])
 def set_username():
     mobile = session.get("login_mobile")
@@ -177,7 +195,7 @@ def set_username():
 
     return render_template("set_username.html")
 
-# ---------- EDIT PROFILE ----------
+
 @app.route("/edit-profile", methods=["GET", "POST"])
 def edit_profile():
     if "username" not in session:
@@ -190,7 +208,7 @@ def edit_profile():
         return redirect(url_for("profile"))
     return render_template("edit_profile.html")
 
-# ---------- WISHLIST ----------
+
 @app.route("/wishlist")
 def wishlist():
     wishlist_ids = session.get("wishlist", [])
@@ -213,7 +231,7 @@ def remove_from_wishlist(product_id):
         session.modified = True
     return redirect(url_for("wishlist"))
 
-# ---------- LOGOUT ----------
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -238,13 +256,13 @@ def my_orders():
         user_id=session["user_id"]
     ).order_by(Order.created_at.desc()).all()
 
-    print("ORDERS:", orders)   # debug
+    print("ORDERS:", orders)   
 
     return render_template("my_orders.html", orders=orders)
 
 
 
-# ---------- CATEGORY ----------
+
 @app.route("/category/<name>")
 def category(name):
 
@@ -284,8 +302,7 @@ def category(name):
     return render_template("shop.html", products=products)
 
 
-# ---------- SEARCH ----------
-# ---------- SEARCH ----------
+
 
 
 @app.route("/search")
@@ -301,12 +318,12 @@ def search():
 
     products = Product.query
 
-    # 🔍 TEXT SEARCH — smart word matching
+    
     if q:
         words = q.lower().split()
 
         for w in words:
-            base = w.rstrip("s")   # hoodie / hoodies both match
+            base = w.rstrip("s")   
             like = f"%{base}%"
 
             products = products.filter(or_(
@@ -315,27 +332,27 @@ def search():
                 Product.type.ilike(like)
             ))
 
-    # 🧵 category filter
+    
     if category:
         products = products.filter(Product.category.ilike(f"%{category}%"))
 
 
-    # 🎨 color
+    
     if color:
         products = products.filter(Product.color.ilike(color))
 
-    # 👕 type
+    
     if type_:
         products = products.filter(Product.type.ilike(type_))
 
-    # 💰 price
+    
     if min_price and min_price.isdigit():
         products = products.filter(Product.price >= int(min_price))
 
     if max_price and max_price.isdigit():
         products = products.filter(Product.price <= int(max_price))
 
-    # ↕ sort
+    
     if sort == "low":
         products = products.order_by(Product.price.asc())
     elif sort == "high":
@@ -391,12 +408,40 @@ def cart():
     cart = session.get("cart", {})
     cart_items = []
     total = 0
-    for pid, qty in cart.items():
+
+    for key, item in cart.items():
+        # ⚡ split key into product_id and size if needed
+        if "_" in key:
+            pid, size = key.split("_")
+        else:
+            pid = key
+            # old items without size
+            if isinstance(item, dict):
+                size = item.get("size", "M")
+            else:
+                size = "M"
+
         product = Product.query.get(int(pid))
+        if not product:
+            continue
+
+        # qty
+        if isinstance(item, dict):
+            qty = item.get("qty", 1)
+        else:
+            qty = item
+
         subtotal = product.price * qty
         total += subtotal
-        cart_items.append({"product": product, "qty": qty, "subtotal": subtotal})
 
+        cart_items.append({
+            "product": product,
+            "qty": qty,
+            "size": size,
+            "subtotal": subtotal
+        })
+
+    # discount logic
     discount = 0
     if total > 3000:
         discount = 600
@@ -404,40 +449,81 @@ def cart():
         discount = 300
     elif total > 1000:
         discount = 100
+
     final_amount = total - discount
     session["total_after_coupon"] = final_amount
-    return render_template("cart.html", cart_items=cart_items, total=total, discount=discount, final_amount=final_amount)
+
+    return render_template("cart.html",
+                           cart_items=cart_items,
+                           total=total,
+                           discount=discount,
+                           final_amount=final_amount)
+
+
+@app.route("/clear")
+def clear_cart():
+    session.pop("cart", None)
+    return "Cart Cleared ✅"
+
+
+
+ # for showing messages
 
 @app.route("/add/<int:product_id>")
 def add_to_cart(product_id):
     cart = session.get("cart", {})
     pid = str(product_id)
-    cart[pid] = cart.get(pid, 0) + 1
-    session["cart"] = cart
-    return redirect(url_for("cart"))
 
+    # ⚡ IMPORTANT: read size from request.args
+    size = request.args.get("size")
+    
+    # ❌ if user didn't select size, block
+    if not size:
+        flash("Please select a size before adding to cart!", "error")
+        return redirect(request.referrer or "/")
 
-
-
-@app.route("/increase/<int:product_id>")
-def increase(product_id):
-    cart = session.get("cart", {})
-    cart[str(product_id)] += 1
-    session["cart"] = cart
-    return redirect(url_for("cart"))
-
-@app.route("/decrease/<int:product_id>")
-def decrease(product_id):
-    cart = session.get("cart", {})
-    pid = str(product_id)
-    if cart[pid] > 1:
-        cart[pid] -= 1
+    # check if same product + same size already in cart
+    cart_key = f"{pid}_{size}"
+    if cart_key in cart:
+        cart[cart_key]["qty"] += 1
     else:
-        del cart[pid]
+        cart[cart_key] = {"qty": 1, "size": size}
+
+    session["cart"] = cart
+    flash("Product added to cart ✅", "success")
+    return redirect(url_for("cart"))
+
+
+
+
+
+@app.route("/increase/<int:product_id>/<size>")
+def increase(product_id, size):
+    cart = session.get("cart", {})
+    key = f"{product_id}_{size}"
+
+    if key in cart:
+        cart[key]["qty"] += 1
+
     session["cart"] = cart
     return redirect(url_for("cart"))
 
-# ---------- ADDRESS ----------
+
+@app.route("/decrease/<int:product_id>/<size>")
+def decrease(product_id, size):
+    cart = session.get("cart", {})
+    key = f"{product_id}_{size}"
+
+    if key in cart:
+        if cart[key]["qty"] > 1:
+            cart[key]["qty"] -= 1
+        else:
+            del cart[key]
+
+    session["cart"] = cart
+    return redirect(url_for("cart"))
+
+
 @app.route("/address", methods=["GET", "POST"])
 def address():
     if "user_id" not in session:
@@ -486,14 +572,134 @@ def delete_address(id):
         db.session.commit()
     return redirect(url_for("address"))
 
-# ---------- PAYMENT ----------
+
+
+
+
+
+
+
+def role_required(role):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if "user_id" not in session:
+                return redirect("/login")
+
+            if session.get("role") != role:
+                return "❌ Access Denied"
+
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@app.route("/make-admin")
+def make_admin():
+    user = User.query.filter_by(mobile="7993412492").first()
+
+    if user:
+        user.role = "admin"
+        db.session.commit()
+        return "Admin created ✅"
+    else:
+        return "User not found ❌"
+
+
+
+
+@app.route("/admin/dashboard")
+@role_required("admin")
+def admin_dashboard():
+    total_products = Product.query.count()
+    total_orders = Order.query.count()
+    total_users = User.query.count()
+
+    return render_template(
+        "admin/dashboard.html",
+        total_products=total_products,
+        total_orders=total_orders,
+        total_users=total_users
+)
+
+
+@app.route("/admin/add-product", methods=["GET", "POST"])
+@role_required("admin")
+def add_product():
+    if request.method == "POST":
+        name = request.form["name"]
+        price = request.form["price"]
+        category = request.form["category"]
+        sizes = request.form.get("sizes")
+        type = request.form.get("type")
+
+        file = request.files["image"]
+
+        if file and file.filename != "":
+            filename = file.filename
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(filepath)
+
+            image_path = "uploads/" + filename
+        else:
+            image_path = None
+
+        new_product = Product(
+            name=name,
+            price=price,
+            category=category,
+            sizes=sizes,
+            type=type,
+            image=image_path
+        )
+
+        db.session.add(new_product)
+        db.session.commit()
+
+        return redirect("/admin/dashboard")
+
+    return render_template("admin/add_product.html")
+
+
+@app.route("/admin/products")
+@role_required("admin")
+def manage_products():
+    products = Product.query.all()
+    return render_template("admin/manage_products.html", products=products)
+
+@app.route("/admin/delete-product/<int:id>")
+@role_required("admin")
+def delete_product(id):
+    product = Product.query.get_or_404(id)
+    db.session.delete(product)
+    db.session.commit()
+    return redirect("/admin/products")
+
+
+@app.route("/admin/edit-product/<int:id>", methods=["GET", "POST"])
+@role_required("admin")
+def edit_product(id):
+    product = Product.query.get_or_404(id)
+
+    if request.method == "POST":
+        product.name = request.form["name"]
+        product.price = request.form["price"]
+        product.category = request.form["category"]
+
+        db.session.commit()
+        return redirect("/admin/products")
+
+    return render_template("admin/edit_product.html", product=product)
+
+
+
 @app.route("/payment", methods=["GET", "POST"])
 def payment():
     total_after_coupon = session.get("total_after_coupon") or 0
 
     if request.method == "POST":
         method = request.form.get("method")
-        session["payment_method"] = method   # ✅ IMPORTANT
+        session["payment_method"] = method  
 
         if method == "cod":
             session["final_amount"] = total_after_coupon + 30
@@ -509,7 +715,6 @@ def payment():
 
     return render_template("payment.html", total_after_coupon=total_after_coupon)
 
-# ---------- UPI ----------
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
@@ -524,6 +729,8 @@ def upi_details():
 def upi_processing():
     return render_template("upi_processing.html", upi_id=session.get("upi_id"), amount=session.get("final_amount"))
 
+from sqlalchemy.orm import joinedload
+
 @app.route("/payment-success")
 def payment_success():
     if "user_id" not in session:
@@ -533,10 +740,18 @@ def payment_success():
     address_id = session.get("address")
     payment_method = session.get("payment_method")
 
-    created_orders = []   # ✅ template ki pampadaniki
+    if not cart:
+        return redirect("/cart")
 
-    for pid, qty in cart.items():
-        for _ in range(qty):   # qty handle chestundi
+    created_ids = []
+
+    for pid, item in cart.items():
+        if isinstance(item, dict):
+            qty = item.get("qty", 1)
+        else:
+            qty = item
+
+        for _ in range(qty):
             order = Order(
                 order_id="ORD" + str(random.randint(100000, 999999)),
                 user_id=session["user_id"],
@@ -546,16 +761,28 @@ def payment_success():
                 status="PLACED"
             )
             db.session.add(order)
-            created_orders.append(order)   # ✅ collect
+            db.session.flush()
+            created_ids.append(order.id)
 
     db.session.commit()
 
-    # cart clear cheyyi
-    session.pop("cart", None)
-    session.pop("payment_method", None)
+    # ✅ 👉 IKDA PETALI (IMPORTANT)
+    orders = Order.query.options(
+        joinedload(Order.product),
+        joinedload(Order.address)
+    ).filter(Order.id.in_(created_ids)).all()
 
-    # ✅ success page ki orders pampu
-    return render_template("success.html", orders=created_orders)
+    # store before clearing
+    final_amount = session.get("total_after_coupon", 0)
+
+    # clear session
+    session.pop("cart", None)
+    session.pop("total_after_coupon", None)
+
+    return render_template("payment_success.html",
+                           orders=orders,
+                           final_amount=final_amount)
+
 
 @app.route("/shop")
 def shop():
@@ -601,7 +828,7 @@ def shop():
     if max_price:
         query = query.filter(Product.price <= int(max_price))
 
-    # sorting
+    
     if sort == "low":
         query = query.order_by(Product.price.asc())
     elif sort == "high":
@@ -639,7 +866,7 @@ def confirm_order():
     db.session.commit()
     return redirect("/payment-success")
 
-# ---------- PRODUCT PAGE ----------
+
 @app.route("/product/<int:pid>")
 def product_page(pid):
     product = Product.query.get_or_404(pid)
@@ -666,7 +893,7 @@ def checkout():
 
 
 
-# ---------- STATIC PAGES ----------
+
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
@@ -683,6 +910,6 @@ def refund():
 def terms():
     return render_template("terms.html")
 
-# ================== RUN ==================
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

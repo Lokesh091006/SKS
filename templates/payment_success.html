@@ -12,7 +12,9 @@
     <div class="order-box">
 
         <div class="order-left">
-            <img src="/static/{{ o.product.image if o.product else 'images/placeholder.png' }}">
+          <img src="{{ url_for('static', filename=o.product.image if o.product else 'images/placeholder.png') }}">
+
+
         </div>
 
         <div class="order-right">

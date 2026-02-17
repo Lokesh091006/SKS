@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #f5f5f6;
+    }
+
+    /* HEADER */
+    .admin-header {
+      background: linear-gradient(90deg, #ff3f6c );
+      color: white;
+      padding: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    /* CONTAINER */
+    .container {
+      padding: 20px;
+    }
+
+    /* CARDS GRID */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      transition: 0.3s;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .card-icon {
+      font-size: 35px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: #777;
+    }
+
+    /* BUTTON */
+    .btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: #ff3f6c;
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .btn:hover {
+      background: #e6335f;
+    }
+
+    /* STATS */
+    .stats {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+    }
+
+    .stat-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ff3f6c;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #777;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="admin-header">
+    👑 Admin Dashboard
+  </div>
+
+  <div class="container">
+
+    <!-- ACTION CARDS -->
+    <div class="grid">
+
+      <div class="card" onclick="location.href='/admin/add-product'">
+        <div class="card-icon">🛒</div>
+        <div class="card-title">Add Product</div>
+        <div class="card-desc">Add new items to your store</div>
+        <a href="/admin/add-product" class="btn">Open</a>
+      </div>
+
+      <div class="card" onclick="location.href='/admin/products'">
+        <div class="card-icon">📦</div>
+        <div class="card-title">Manage Products</div>
+        <div class="card-desc">Edit / Delete products</div>
+        <a href="/admin/products" class="btn">Open</a>
+      </div>
+
+      <div class="card" onclick="location.href='/my-orders'">
+        <div class="card-icon">📑</div>
+        <div class="card-title">View Orders</div>
+        <div class="card-desc">Check customer orders</div>
+        <a href="/my-orders" class="btn">Open</a>
+      </div>
+
+      <div class="card" onclick="location.href='/'">
+        <div class="card-icon">🏠</div>
+        <div class="card-title">Go to Store</div>
+        <div class="card-desc">Visit main website</div>
+        <a href="/" class="btn">Open</a>
+      </div>
+
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+
+      <div class="stat-box">
+        <div class="stat-number">{{ total_products or 0 }}</div>
+        <div class="stat-label">Products</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-number">{{ total_orders or 0 }}</div>
+        <div class="stat-label">Orders</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="stat-number">{{ total_users or 0 }}</div>
+        <div class="stat-label">Users</div>
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

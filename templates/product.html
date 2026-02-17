@@ -19,21 +19,50 @@
 
     <!-- LEFT : IMAGE -->
     <div class="product-image">
-        <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}">
-
+        <div class="slider">
+            <div class="slides" id="slides">
+                <img src="{{ url_for('static', filename=product.image) }}">
+                {% if product.image2 %}
+                <img src="{{ url_for('static', filename=product.image2) }}">
+                {% endif %}
+                {% if product.image3 %}
+                <img src="{{ url_for('static', filename=product.image3) }}">
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- RIGHT : DETAILS -->
     <div class="product-details">
 
         <h1 class="product-title">{{ product.name }}</h1>
-
         <p class="product-price">₹ {{ product.price }}</p>
-
         <p class="product-desc">
             Premium quality {{ product.name }} with modern fit.  
             Perfect for daily wear and special occasions.
         </p>
+
+        <!-- SIZE SELECTION -->
+        <div class="size-box">
+            <label>Select Size:</label>
+            <div class="sizes">
+                {% if product.category == "men" and product.type in ["tshirt", "shirt"] %}
+                    <span class="size">S</span>
+                    <span class="size">M</span>
+                    <span class="size">L</span>
+                    <span class="size">XL</span>
+                    <span class="size">XXL</span>
+                {% endif %}
+                {% if product.category == "men" and product.type == "pant" %}
+                    <span class="size">28</span>
+                    <span class="size">30</span>
+                    <span class="size">32</span>
+                    <span class="size">34</span>
+                    <span class="size">36</span>
+                {% endif %}
+            </div>
+            <input type="hidden" name="size" id="selectedSize">
+        </div>
 
         <!-- QUANTITY -->
         <div class="qty-box">
@@ -54,20 +83,21 @@
         <div class="product-buttons">
 
             <!-- WISHLIST -->
-          
-            <a href="{{ url_for('add_to_wishlist', product_id=product.id) }}" class="card-btn">
-                 Add to Wishlist
-            </a>
+            <!-- WISHLIST -->
+<a href="#" id="addToWishlistBtn" class="card-btn">
+    Add to Wishlist
+</a>
 
-            <!-- CART -->
-            <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn-cart">
-                🛒 Add to Cart
-            </a>
+<!-- CART -->
+<a href="#" id="addToCartBtn" class="btn-cart">
+    🛒 Add to Cart
+</a>
 
-            <!-- BUY NOW -->
-            <a href="{{ url_for('address', product_id=product.id) }}" class="btn-buy">
-                ⚡ Buy Now
-            </a>
+<!-- BUY NOW -->
+<a href="#" id="buyNowBtn" class="btn-buy">
+    ⚡ Buy Now
+</a>
+
 
         </div>
 
@@ -83,6 +113,61 @@
 </section>
 
 {% include "footer.html" %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const sizes = document.querySelectorAll(".size");
+    const hiddenInput = document.getElementById("selectedSize");
+
+    const addToCartBtn = document.getElementById("addToCartBtn");
+    const addToWishlistBtn = document.getElementById("addToWishlistBtn");
+    const buyNowBtn = document.getElementById("buyNowBtn");
+
+    // SIZE CLICK
+    sizes.forEach(size => {
+        size.addEventListener("click", () => {
+            sizes.forEach(s => s.classList.remove("active"));
+            size.classList.add("active");
+            hiddenInput.value = size.innerText;
+        });
+    });
+
+    // ADD TO CART
+    addToCartBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        const size = hiddenInput.value;
+        if (!size) {
+            alert("Please select a size before adding to cart!");
+            return;
+        }
+        window.location.href = "{{ url_for('add_to_cart', product_id=product.id) }}" + "?size=" + encodeURIComponent(size);
+    });
+
+    // ADD TO WISHLIST
+    addToWishlistBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        const size = hiddenInput.value;
+        if (!size) {
+            alert("Please select a size before adding to wishlist!");
+            return;
+        }
+        window.location.href = "{{ url_for('add_to_wishlist', product_id=product.id) }}" + "?size=" + encodeURIComponent(size);
+    });
+
+    // BUY NOW
+    buyNowBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        const size = hiddenInput.value;
+        if (!size) {
+            alert("Please select a size before proceeding!");
+            return;
+        }
+        window.location.href = "{{ url_for('address', product_id=product.id) }}" + "?size=" + encodeURIComponent(size);
+    });
+
+});
+</script>
 
 </body>
 </html>
