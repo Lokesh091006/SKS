@@ -20,16 +20,25 @@
     <!-- LEFT : IMAGE -->
     <div class="product-image">
         <div class="slider">
-            <div class="slides" id="slides">
-                <img src="{{ url_for('static', filename=product.image) }}">
-                {% if product.image2 %}
-                <img src="{{ url_for('static', filename=product.image2) }}">
-                {% endif %}
-                {% if product.image3 %}
-                <img src="{{ url_for('static', filename=product.image3) }}">
-                {% endif %}
-            </div>
-        </div>
+
+    <!-- LEFT ARROW -->
+    <button class="prev" id="prevBtn">❮</button>
+
+    <div class="slides" id="slides">
+        <img src="{{ url_for('static', filename=product.image) }}">
+        {% if product.image2 %}
+        <img src="{{ url_for('static', filename=product.image2) }}">
+        {% endif %}
+        {% if product.image3 %}
+        <img src="{{ url_for('static', filename=product.image3) }}">
+        {% endif %}
+    </div>
+
+    <!-- RIGHT ARROW -->
+    <button class="next" id="nextBtn">❯</button>
+
+</div>
+
     </div>
 
     <!-- RIGHT : DETAILS -->
@@ -116,6 +125,34 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+
+    let index = 0;
+const slides = document.getElementById("slides");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+// NEXT BUTTON →
+nextBtn.addEventListener("click", () => {
+    if (!slides) return;
+
+    if (index < slides.children.length - 1) {
+        index++;
+        slides.style.transform = `translateX(-${index * 100}%)`;
+    }
+});
+
+// PREVIOUS BUTTON ←
+prevBtn.addEventListener("click", () => {
+    if (!slides) return;
+
+    if (index > 0) {
+        index--;
+        slides.style.transform = `translateX(-${index * 100}%)`;
+    }
+});
+
+
+
 
     const sizes = document.querySelectorAll(".size");
     const hiddenInput = document.getElementById("selectedSize");

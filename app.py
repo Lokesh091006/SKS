@@ -631,26 +631,46 @@ def add_product():
         price = request.form["price"]
         category = request.form["category"]
         sizes = request.form.get("sizes")
-        type = request.form.get("type")
+        type_ = request.form.get("type")
 
-        file = request.files["image"]
+        img1 = request.files["image1"]
+        img2 = request.files.get("image2")
+        img3 = request.files.get("image3")
 
-        if file and file.filename != "":
-            filename = file.filename
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(filepath)
+        # IMAGE 1 (mandatory)
+        img1_path = None
+        if img1 and img1.filename != "":
+            filename1 = img1.filename
+            path1 = os.path.join(app.config["UPLOAD_FOLDER"], filename1)
+            img1.save(path1)
+            img1_path = "uploads/" + filename1
 
-            image_path = "uploads/" + filename
-        else:
-            image_path = None
+        # IMAGE 2 (optional)
+        img2_path = None
+        if img2 and img2.filename != "":
+            filename2 = img2.filename
+            path2 = os.path.join(app.config["UPLOAD_FOLDER"], filename2)
+            img2.save(path2)
+            img2_path = "uploads/" + filename2
 
+        # IMAGE 3 (optional)
+        img3_path = None
+        if img3 and img3.filename != "":
+            filename3 = img3.filename
+            path3 = os.path.join(app.config["UPLOAD_FOLDER"], filename3)
+            img3.save(path3)
+            img3_path = "uploads/" + filename3
+
+        # SAVE PRODUCT
         new_product = Product(
             name=name,
             price=price,
             category=category,
             sizes=sizes,
-            type=type,
-            image=image_path
+            type=type_,
+            image=img1_path,
+            image2=img2_path,
+            image3=img3_path
         )
 
         db.session.add(new_product)

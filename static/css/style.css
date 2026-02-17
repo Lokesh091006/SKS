@@ -3169,3 +3169,90 @@ body {
     font-size: 16px;
     cursor: pointer;
 }
+
+.slider {
+    width: 100%;
+    overflow: hidden;
+}
+
+.slides {
+    display: flex;
+    transition: 0.5s;
+}
+
+.slides img {
+    width: 100%;
+    flex-shrink: 0;
+}
+.slider {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+.slides {
+    display: flex;
+    transition: 0.5s;
+}
+
+.slides img {
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* arrows */
+
+
+.prev { left: 10px; }
+.next { right: 10px; }
+
+.slider {
+    position: relative;
+    width: 100%;
+    max-width: 400px; /* 👈 important */
+    overflow: hidden;
+}
+
+.slides {
+    display: flex;
+    width: 100%;
+    transition: transform 0.5s ease-in-out;
+}
+
+.slides img {
+    width: 100%;
+    min-width: 100%;   /* 🔥 MOST IMPORTANT */
+    height: auto;
+    object-fit: cover;
+}
+.slider {
+    border-radius: 12px;
+}
+.prev, .next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 20px;
+    border-radius: 50%;
+    z-index: 10;   /* 🔥 ADD THIS */
+}
+.prev {
+    left: 10px;
+}
+
+.next {
+    right: 10px;
+}
+.slider img {
+    position: relative;
+    z-index: 1;
+}
+.prev, .next {
+    width: 40px;
+    height: 40px;
+}
