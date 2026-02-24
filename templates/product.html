@@ -9,6 +9,8 @@
 
     <!-- MAIN CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 <body>
 
@@ -93,18 +95,18 @@
 
             <!-- WISHLIST -->
             <!-- WISHLIST -->
-<a href="#" id="addToWishlistBtn" class="card-btn">
-    Add to Wishlist
-</a>
+<div class="wishlist-wrap">
+    <i id="wishlistIcon" class="fa-regular fa-heart"></i>
+</div>
 
 <!-- CART -->
 <a href="#" id="addToCartBtn" class="btn-cart">
-    🛒 Add to Cart
+    🛒 
 </a>
 
 <!-- BUY NOW -->
 <a href="#" id="buyNowBtn" class="btn-buy">
-    ⚡ Buy Now
+     Buy Now
 </a>
 
 
@@ -126,42 +128,31 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
+    // ===== SLIDER =====
     let index = 0;
-const slides = document.getElementById("slides");
-const prevBtn = document.getElementById("prevBtn");
-const nextBtn = document.getElementById("nextBtn");
+    const slides = document.getElementById("slides");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
 
-// NEXT BUTTON →
-nextBtn.addEventListener("click", () => {
-    if (!slides) return;
+    nextBtn.addEventListener("click", () => {
+        if (index < slides.children.length - 1) {
+            index++;
+            slides.style.transform = `translateX(-${index * 100}%)`;
+        }
+    });
 
-    if (index < slides.children.length - 1) {
-        index++;
-        slides.style.transform = `translateX(-${index * 100}%)`;
-    }
-});
-
-// PREVIOUS BUTTON ←
-prevBtn.addEventListener("click", () => {
-    if (!slides) return;
-
-    if (index > 0) {
-        index--;
-        slides.style.transform = `translateX(-${index * 100}%)`;
-    }
-});
+    prevBtn.addEventListener("click", () => {
+        if (index > 0) {
+            index--;
+            slides.style.transform = `translateX(-${index * 100}%)`;
+        }
+    });
 
 
-
-
+    // ===== SIZE SELECT =====
     const sizes = document.querySelectorAll(".size");
     const hiddenInput = document.getElementById("selectedSize");
 
-    const addToCartBtn = document.getElementById("addToCartBtn");
-    const addToWishlistBtn = document.getElementById("addToWishlistBtn");
-    const buyNowBtn = document.getElementById("buyNowBtn");
-
-    // SIZE CLICK
     sizes.forEach(size => {
         size.addEventListener("click", () => {
             sizes.forEach(s => s.classList.remove("active"));
@@ -170,37 +161,64 @@ prevBtn.addEventListener("click", () => {
         });
     });
 
-    // ADD TO CART
+
+    // ===== BUTTONS =====
+    const addToCartBtn = document.getElementById("addToCartBtn");
+    const buyNowBtn = document.getElementById("buyNowBtn");
+
     addToCartBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        const size = hiddenInput.value;
-        if (!size) {
-            alert("Please select a size before adding to cart!");
+        if (!hiddenInput.value) {
+            alert("Select size first!");
             return;
         }
-        window.location.href = "{{ url_for('add_to_cart', product_id=product.id) }}" + "?size=" + encodeURIComponent(size);
+        window.location.href = "{{ url_for('add_to_cart', product_id=product.id) }}" + "?size=" + encodeURIComponent(hiddenInput.value);
     });
 
-    // ADD TO WISHLIST
-    addToWishlistBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        const size = hiddenInput.value;
-        if (!size) {
-            alert("Please select a size before adding to wishlist!");
-            return;
-        }
-        window.location.href = "{{ url_for('add_to_wishlist', product_id=product.id) }}" + "?size=" + encodeURIComponent(size);
-    });
-
-    // BUY NOW
     buyNowBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        const size = hiddenInput.value;
-        if (!size) {
-            alert("Please select a size before proceeding!");
+        if (!hiddenInput.value) {
+            alert("Select size first!");
             return;
         }
-        window.location.href = "{{ url_for('address', product_id=product.id) }}" + "?size=" + encodeURIComponent(size);
+        window.location.href = "{{ url_for('address', product_id=product.id) }}" + "?size=" + encodeURIComponent(hiddenInput.value);
+    });
+
+
+    // ===== ❤️ WISHLIST =====
+    const wishlistIcon = document.getElementById("wishlistIcon");
+
+    // page load appudu already wishlist lo unte red
+    const wishlist = {{ session.get("wishlist", [])|tojson }};
+    if (wishlist.includes({{ product.id }})) {
+        wishlistIcon.classList.add("fa-solid");
+        wishlistIcon.classList.remove("fa-regular");
+        wishlistIcon.style.color = "red";
+    }
+
+    wishlistIcon.addEventListener("click", function () {
+
+        if (!hiddenInput.value) {
+            alert("Select size first!");
+            return;
+        }
+
+        fetch(`/add-to-wishlist/{{ product.id }}`)
+            .then(res => res.json())
+            .then(data => {
+
+                if (data.status === "added") {
+                    wishlistIcon.classList.add("fa-solid");
+                    wishlistIcon.classList.remove("fa-regular");
+                    wishlistIcon.style.color = "red";
+                } else {
+                    wishlistIcon.classList.add("fa-regular");
+                    wishlistIcon.classList.remove("fa-solid");
+                    wishlistIcon.style.color = "black";
+                }
+
+            });
+
     });
 
 });

@@ -1,85 +1,359 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Mall SKS</title>
+<meta charset="UTF-8">
+<title>Mall SKS</title>
 
-    <!-- RESPONSIVE -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <!-- MAIN CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+
+
+.home-shop{
+    display:flex;
+    position:relative;
+}
+
+
+/* HIDE STATE */
+
+/* ===== FILTER HEADINGS ===== */
+
+
+/* SUB MENUS */
+.sub-box,
+.sub-box-inner{
+    display:none;
+}
+
+.sub-box a{
+    display:block;
+    padding:6px 0;
+    text-decoration:none;
+    color:#333;
+    transition:0.2s;
+}
+
+.sub-box a:hover{
+    color:#ff4d8d;
+    padding-left:5px;
+}
+
+.sub-box p{
+    cursor:pointer;
+    margin:6px 0;
+}
+
+/* ===== PRODUCTS ===== */
+.products{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 🔥 2 products fix */
+    gap: 12px;
+    padding: 10px;
+    width: 100%;
+}
+
+/* CARD */
+.card{
+    background:white;
+    border-radius:16px;
+    padding:12px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
+    transition:0.3s;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+}
+
+/* IMAGE */
+.card img{
+    width:100%;
+    height:220px;
+    object-fit:cover;
+    border-radius:12px;
+}
+
+/* BUTTON */
+.view-btn{
+    display:inline-block;
+    margin-top:10px;
+    padding:8px 14px;
+    background:#ff4d8d;
+    color:white;
+    border-radius:8px;
+    text-decoration:none;
+}
+
+.view-btn:hover{
+    background:#e63c7a;
+}
+
+/* MOBILE */
+@media (min-width: 992px) {
+    .products {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .product-img {
+        height: 220px;
+    }
+}
+
+
+.filters {
+    width: 250px;
+    min-width: 250px;
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    margin-right: 15px;
+}
+
+</style>
 </head>
+
 <body>
 
-<!-- ================= HEADER ================= -->
 {% include "header.html" %}
 
-<!-- ================= HERO SECTION ================= -->
+<!-- HERO -->
+ {% if not query %}
 <section class="hero">
-
-    <!-- LEFT -->
     <div class="hero-left">
         <h1>Mall <span>SKS</span></h1>
-        <p>
-            Fashion that moves you. <br>
-            Discover clothing, footwear & accessories.
-        </p>
+        <p>Fashion that moves you.<br>Discover clothing, footwear & accessories.</p>
         <a href="/category/men" class="hero-btn">Shop Now</a>
     </div>
 
-    <!-- RIGHT -->
     <div class="hero-right">
-        <img src="https://www.jockey.in/cdn/shop/files/AM38_GREEN_0103_S125_JKY_1.webp?v=1716465594&width=560"
-             class="hero-img img1">
-
-        <img src="https://tse3.mm.bing.net/th/id/OIP.U5786qlQJInNcJ_Z9CNDyQHaHa?pid=Api"
-             class="hero-img img2">
-
-        <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
-             class="hero-img img3">
+        <img src="https://www.jockey.in/cdn/shop/files/AM38_GREEN_0103_S125_JKY_1.webp?v=1716465594&width=560" class="hero-img img1">
+        <img src="https://tse3.mm.bing.net/th/id/OIP.U5786qlQJInNcJ_Z9CNDyQHaHa?pid=Api" class="hero-img img2">
+        <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f" class="hero-img img3">
     </div>
-
 </section>
-
-<!-- ================= SHOP BY CATEGORY ================= -->
+{% endif %}
+<!-- CATEGORIES -->
+ {% if not query %}
 <section class="collections">
-
     <h2 class="section-title">Shop by Category</h2>
 
     <div class="collection-grid">
 
-        <!-- MEN -->
         <a href="/category/men" class="collection-card">
             <img src="https://www.jockey.in/cdn/shop/files/AM38_GREEN_0103_S125_JKY_1.webp?v=1716465594&width=560">
             <div class="overlay">
                 <h3>Men Collection</h3>
-                <p>Casuals & Formals</p>
             </div>
         </a>
 
-        <!-- WOMEN -->
         <a href="/category/women" class="collection-card">
             <img src="https://tse3.mm.bing.net/th/id/OIP.U5786qlQJInNcJ_Z9CNDyQHaHa?pid=Api">
             <div class="overlay">
                 <h3>Women Collection</h3>
-                <p>Dresses & Ethnic</p>
             </div>
         </a>
 
-        <!-- KIDS -->
         <a href="/category/kids" class="collection-card">
             <img src="https://i5.walmartimages.com/seo/Cute-Kids-Graphic-Tee-Girls-Short-Sleeve-T-Shirt-Letter-Print-Child-Back-To-School-Season_534d0d09-1e0c-4a78-a1c5-461cb14d05e2.8c60fef690cdc421c315d44c62594f5d.jpeg">
             <div class="overlay">
                 <h3>Kids Collection</h3>
-                <p>Fun & Comfort</p>
             </div>
         </a>
 
     </div>
-
 </section>
-<!-- MOBILE BOTTOM NAV -->
+{% endif %}
+
+<!-- 🔥 FILTER + PRODUCTS START HERE -->
+<div class="home-shop">
+{% if query %}
+    
+
+
+
+<div class="filters" id="filterBox">
+
+<!-- ===== HOME ===== -->
+{% if page == "home" %}
+
+<div class="filter-section">
+  <h4>Categories</h4>
+
+  <a href="/category/men">Men</a>
+  <a href="/category/women">Women</a>
+  <a href="/category/kids">Kids</a>
+
+</div>
+
+{% endif %}
+
+
+<!-- ===== MEN ===== -->
+{% if page == "men" %}
+<div class="filter-section">
+  <h4 onclick="toggleSection('menBox')">Men ▾</h4>
+
+  <div id="menBox" class="sub-box" style="display:block;">
+
+    <p onclick="toggleSection('shirtBox')">Shirts ▸</p>
+    <div id="shirtBox" class="sub-box-inner">
+  <a href="/category/men?type=shirt&brand=ramraj">Ramraj</a>
+  <a href="/category/men?type=shirt&brand=coolcolours">Coolcolours</a>
+  <a href="/category/men?type=shirt&brand=whitehouse">White House</a>
+  <a href="/category/men?type=shirt&brand=red_white">Red & White</a>
+  <a href="/category/men?type=shirt&brand=oyemberg">Oyemberg</a>
+</div>
+
+    <p><a href="/category/men?type=tshirt">T-Shirts</a></p>
+    <p><a href="/category/men?type=jeans">Jeans</a></p>
+    <p><a href="/category/men?type=Cotton pants">Cotton Pants</a></p>
+    <p><a href="/category/men?type=Night Wear">Night Wear</a></p>
+
+  </div>
+    <select id="sortSelect" onchange="sortProducts()">
+        <option value="">Sort</option>
+        <option value="low">Price: Low → High</option>
+        <option value="high">Price: High → Low</option>
+    </select>
+</div>
+{% endif %}
+
+
+<!-- ===== WOMEN ===== -->
+{% if page == "women" %}
+<div class="filter-section">
+  <h4 onclick="toggleSection('womenBox')">Women ▾</h4>
+
+  <div id="womenBox" class="sub-box" style="display:block;">
+
+    <p onclick="toggleSection('sareeBox')">Sarees ▸</p>
+    <div id="sareeBox" class="sub-box-inner">
+        <a href="{{ url_for('category', name='women', type='saree', brand='pattusarees') }}">Pattu Sarees</a>
+
+<a href="{{ url_for('category', name='women', type='saree', brand='cottonsarees') }}">Cotton Sarees</a>
+
+<a href="{{ url_for('category', name='women', type='saree', brand='fancysarees') }}">Fancy Sarees</a>
+
+<a href="{{ url_for('category', name='women', type='saree', brand='syntheticsarees') }}">Synthetic Sarees</a>
+   
+    </div>
+
+    <<p><a href="{{ url_for('category', name='women', type='kurti') }}">Kurties</a></p>
+
+<p><a href="{{ url_for('category', name='women', type='legging') }}">Leggings</a></p>
+
+<p><a href="{{ url_for('category', name='women', type='chudidar') }}">Chudidars</a></p>
+
+<p><a href="{{ url_for('category', name='women', type='croptop') }}">Crop Tops</a></p>
+
+<p><a href="{{ url_for('category', name='women', type='innerwear') }}">InnerWear</a></p>
+
+<p><a href="{{ url_for('category', name='women', type='nighty') }}">Nighty</a></p>
+
+  </div>
+    <select id="sortSelect" onchange="sortProducts()">
+        <option value="">Sort</option>
+        <option value="low">Price: Low → High</option>
+        <option value="high">Price: High → Low</option>
+    </select>
+</div>
+{% endif %}
+
+
+<!-- ===== KIDS ===== -->
+{% if page == "kids" %}
+<div class="filter-section">
+  <h4 onclick="toggleSection('kidsBox')">Kids ▾</h4>
+
+  <div id="kidsBox" class="sub-box" style="display:block;">
+
+    <p onclick="toggleSection('boysBox')">Boys ▸</p>
+    <div id="boysBox" class="sub-box-inner">
+      <a href="{{ url_for('category', name='kids', type='boys', brand='partywear') }}">Party Wear</a>
+      <a href="{{ url_for('category', name='kids', type='boys', brand='nightdress') }}">Night Dress</a>
+    </div>
+
+    <p onclick="toggleSection('girlsBox')">Girls ▸</p>
+    <div id="girlsBox" class="sub-box-inner">
+      <a href="{{ url_for('category', name='kids', type='girls', brand='partywear') }}">Party Wear</a>
+      <a href="{{ url_for('category', name='kids', type='girls', brand='nightdress') }}">Night Dress</a>
+    </div>
+
+    <p>
+      <a href="{{ url_for('category', name='kids', type='babywear') }}">Baby Wear</a>
+    </p>
+
+  </div>
+</div>
+    <select id="sortSelect" onchange="sortProducts()">
+        <option value="">Sort</option>
+        <option value="low">Price: Low → High</option>
+        <option value="high">Price: High → Low</option>
+    </select>
+</div>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
+
+</div>
+{% endif %}
+
+
+<!-- PRODUCTS -->
+<div class="products">
+
+{% if query and not products %}
+  <h3 style="grid-column: span 4; text-align:center;">
+    No products found for "{{ query }}"
+  </h3>
+{% endif %}
+
+{% for p in products %}
+<div class="card">
+
+    <a href="{{ url_for('product_page', pid=p.id) }}">
+        <img src="{{ url_for('static', filename=p.image) }}" class="product-img">
+    </a>
+
+    <h4>{{ p.name }}</h4>
+    <b>₹{{ p.price }}</b>
+
+</div>
+{% endfor %}
+
+</div>
+
+</div>
+
+<script>
+function toggleSection(id){
+  let el = document.getElementById(id);
+  el.style.display = (el.style.display === "block") ? "none" : "block";
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    let page = "{{ page }}";
+
+    if(page !== "home"){
+        document.getElementById("filterBox").classList.add("active");
+    }
+
+});
+
+</script>
+
+<!-- MOBILE NAV -->
 <div class="mobile-bottom-nav">
   <a href="/">🏠<span>Home</span></a>
   <a href="/orders">📦<span>Orders</span></a>
@@ -87,9 +361,8 @@
   <a href="/profile">👤<span>Profile</span></a>
 </div>
 
-
-<!-- ================= FOOTER ================= -->
 <div style="height:60px;"></div>
+
 {% include "footer.html" %}
 
 </body>

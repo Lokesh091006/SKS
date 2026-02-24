@@ -2,6 +2,7 @@ import random
 import re
 import requests
 import os
+import time
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
@@ -14,10 +15,6 @@ from sqlalchemy import or_
 from functools import wraps
 from flask import flash 
 from sqlalchemy.orm import joinedload
-
-
-
-   
    
 
 
@@ -74,11 +71,47 @@ def send_sms_otp(mobile, otp):
 
 
 
+from flask import request, render_template
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def home():
-    products = Product.query.all()
-    return render_template("home.html", products=products)
+    query = request.args.get("q")
+    page = "home"
+
+    if query:
+        words = query.lower().split()
+        products_query = Product.query
+
+        for w in words:
+            base = w.rstrip("s")
+            products_query = products_query.filter(
+                Product.name.ilike(f"%{base}%")
+            )
+
+        products = products_query.all()
+
+        # 🔥 SMART CATEGORY DETECTION
+        if products:
+            first_product_name = products[0].name.lower()
+
+            if "men" in first_product_name:
+                page = "men"
+            elif "women" in first_product_name:
+                page = "women"
+            elif "kids" in first_product_name:
+                page = "kids"
+            else:
+                page = "home"
+
+    else:
+        products = Product.query.all()
+
+    return render_template(
+        "home.html",
+        products=products,
+        query=query,
+        page=page
+    )
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -215,14 +248,21 @@ def wishlist():
     wishlist_products = [p for p in Product.query.all() if p.id in wishlist_ids]
     return render_template("wishlist.html", products=wishlist_products)
 
+
 @app.route("/add-to-wishlist/<int:product_id>")
 def add_to_wishlist(product_id):
     if "wishlist" not in session:
         session["wishlist"] = []
+
     if product_id not in session["wishlist"]:
         session["wishlist"].append(product_id)
         session.modified = True
-    return redirect(request.referrer or url_for("home"))
+        return jsonify({"status": "added"})
+    else:
+        session["wishlist"].remove(product_id)
+        session.modified = True
+        return jsonify({"status": "removed"})
+
 
 @app.route("/wishlist/remove/<int:product_id>")
 def remove_from_wishlist(product_id):
@@ -271,15 +311,24 @@ def category(name):
     max_price = request.args.get("max")
     color = request.args.get("color")
     type_ = request.args.get("type")
+    brand = request.form.get("brand")
     sort = request.args.get("sort")
+    brand = request.args.get("brand")   # NEW
+    sub = request.args.get("sub")       # NEW
 
-    query = Product.query.filter_by(category=name)
+    query = Product.query.filter(Product.category.ilike(f"%{name}%"))
 
     if q:
         query = query.filter(Product.name.ilike(f"%{q}%"))
 
     if type_:
-        query = query.filter_by(type=type_)
+        query = query.filter(Product.type.ilike(f"%{type_}%"))
+
+    if brand:
+        query = query.filter(Product.brand.ilike(f"%{brand}%"))
+
+    if sub:
+        query = query.filter(Product.sub.ilike(f"%{sub}%"))
 
     if color:
         query = query.filter_by(color=color)
@@ -298,74 +347,52 @@ def category(name):
         query = query.order_by(Product.name.asc())
 
     products = query.all()
+    
 
-    return render_template("shop.html", products=products)
+    return render_template("shop.html", products=products, page=name)
 
 
 
 
+
+
+from sqlalchemy import and_
 
 @app.route("/search")
 def search():
-
-    q = request.args.get("q", "").strip()
-    category = request.args.get("category")
-    min_price = request.args.get("min_price")
-    max_price = request.args.get("max_price")
-    color = request.args.get("color")
-    type_ = request.args.get("type")
-    sort = request.args.get("sort")
+    q = request.args.get("q", "").strip().lower()
 
     products = Product.query
 
-    
     if q:
-        words = q.lower().split()
+        words = q.replace("-", " ").split()
 
-        for w in words:
-            base = w.rstrip("s")   
-            like = f"%{base}%"
+        category = None
+        product_type = None
 
-            products = products.filter(or_(
-                Product.name.ilike(like),
-                Product.category.ilike(like),
-                Product.type.ilike(like)
-            ))
+        if "men" in words:
+            category = "men"
+        if "women" in words:
+            category = "women"
 
-    
-    if category:
-        products = products.filter(Product.category.ilike(f"%{category}%"))
+        # last word = main product
+        product_type = words[-1].rstrip("s")
 
-
-    
-    if color:
-        products = products.filter(Product.color.ilike(color))
-
-    
-    if type_:
-        products = products.filter(Product.type.ilike(type_))
-
-    
-    if min_price and min_price.isdigit():
-        products = products.filter(Product.price >= int(min_price))
-
-    if max_price and max_price.isdigit():
-        products = products.filter(Product.price <= int(max_price))
-
-    
-    if sort == "low":
-        products = products.order_by(Product.price.asc())
-    elif sort == "high":
-        products = products.order_by(Product.price.desc())
+        if category:
+            products = products.filter(
+                and_(
+                    Product.category.ilike(f"%{category}%"),
+                    Product.type.ilike(f"%{product_type}%")
+                )
+            )
+        else:
+            products = products.filter(
+                Product.type.ilike(f"%{product_type}%")
+            )
 
     results = products.all()
 
-    return render_template(
-        "search.html",
-        products=results,
-        query=q
-    )
-
+    return render_template("search.html", products=results, query=q)
 
 
 @app.route("/live-search")
@@ -632,7 +659,8 @@ def add_product():
         category = request.form["category"]
         sizes = request.form.get("sizes")
         type_ = request.form.get("type")
-
+        brand = request.form.get("brand")
+        print("BRAND:", brand)  # debug
         img1 = request.files["image1"]
         img2 = request.files.get("image2")
         img3 = request.files.get("image3")
@@ -668,6 +696,7 @@ def add_product():
             category=category,
             sizes=sizes,
             type=type_,
+            brand=brand,   
             image=img1_path,
             image2=img2_path,
             image3=img3_path
@@ -763,9 +792,25 @@ def payment_success():
     if not cart:
         return redirect("/cart")
 
+    if not address_id or not payment_method:
+        return redirect("/checkout")
+
     created_ids = []
 
     for pid, item in cart.items():
+
+        # split product & size safely
+        if "_" in pid:
+            try:
+                product_id, size = pid.split("_")
+                product_id = int(product_id)
+            except ValueError:
+                continue
+        else:
+            product_id = int(pid)
+            size = None
+
+        # quantity
         if isinstance(item, dict):
             qty = item.get("qty", 1)
         else:
@@ -773,12 +818,13 @@ def payment_success():
 
         for _ in range(qty):
             order = Order(
-                order_id="ORD" + str(random.randint(100000, 999999)),
+                order_id="ORD" + str(int(time.time()*1000)),
                 user_id=session["user_id"],
-                product_id=int(pid),
+                product_id=product_id,
                 address_id=address_id,
                 payment_method=payment_method,
-                status="PLACED"
+                status="PLACED",
+                size=size
             )
             db.session.add(order)
             db.session.flush()
@@ -786,23 +832,21 @@ def payment_success():
 
     db.session.commit()
 
-    # ✅ 👉 IKDA PETALI (IMPORTANT)
     orders = Order.query.options(
         joinedload(Order.product),
         joinedload(Order.address)
     ).filter(Order.id.in_(created_ids)).all()
 
-    # store before clearing
     final_amount = session.get("total_after_coupon", 0)
 
-    # clear session
     session.pop("cart", None)
     session.pop("total_after_coupon", None)
 
-    return render_template("payment_success.html",
-                           orders=orders,
-                           final_amount=final_amount)
-
+    return render_template(
+        "payment_success.html",
+        orders=orders,
+        final_amount=final_amount
+    )
 
 @app.route("/shop")
 def shop():
@@ -814,41 +858,60 @@ def shop():
     type_ = request.args.get("type")
     category = request.args.get("category")
     sort = request.args.get("sort")
+    sub = request.args.get("sub")
+    size = request.args.get("size")
+    brand = request.args.get("brand")
 
     query = Product.query
 
+    # 🔍 SEARCH
     if q:
-
         words = q.lower().split()
-
         for w in words:
+            like = f"%{w.rstrip('s')}%"
+            query = query.filter(or_(
+                Product.name.ilike(like),
+                Product.category.ilike(like),
+                Product.type.ilike(like),
+                Product.brand.ilike(like)   # 🔥 ADD THIS
+            ))
 
-             like = f"%{w.rstrip('s')}%"
-             query = query.filter(or_(
-             Product.name.ilike(like),
-             Product.category.ilike(like),
-             Product.type.ilike(like)
-        ))
-
+    # 🧥 CATEGORY
     if category:
+        query = query.filter(Product.category.ilike(f"%{category.strip()}%"))
 
-        query = query.filter(Product.category.ilike(f"%{category}%"))
-
-      
-
+    # 👕 TYPE
     if type_:
-        query = query.filter_by(type=type_)
+        query = query.filter(Product.type.ilike(f"%{type_.strip()}%"))
 
+    # 🏷 BRAND (🔥 IMPROVED)
+    if brand:
+        brand_clean = brand.strip().lower()
+
+        query = query.filter(
+            Product.brand.ilike(f"%{brand_clean}%")
+        )
+
+    # 🔽 SUB CATEGORY
+    if sub:
+        query = query.filter(Product.sub.ilike(f"%{sub.strip()}%"))
+
+    # 📏 SIZE
+    if size:
+        query = query.filter(Product.size == size)
+
+    # 🎨 COLOR
     if color:
-        query = query.filter_by(color=color)
+        query = query.filter(Product.color.ilike(f"%{color.strip()}%"))
 
+    # 💰 PRICE
     if min_price:
         query = query.filter(Product.price >= int(min_price))
 
     if max_price:
         query = query.filter(Product.price <= int(max_price))
 
-    
+    # 🔃 SORT
     if sort == "low":
         query = query.order_by(Product.price.asc())
     elif sort == "high":

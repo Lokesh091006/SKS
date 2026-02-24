@@ -3,19 +3,23 @@
 
 <header class="navbar">
 
-  <!-- LEFT : HAMBURGER -->
+  <!-- ☰ LEFT (MOBILE ONLY) -->
   <div class="hamburger mobile-only" onclick="toggleMenu()">☰</div>
 
-  <!-- BRAND -->
+  <!-- 🔥 CENTER LOGO -->
   <a href="/" class="logo">
     <img src="https://image2url.com/r2/default/images/1769949284478-5cbbd602-d8ed-4067-afcb-2263ae95ce07.jpg" class="logo-peacock">
+    
     <div class="logo-text">
       <div class="sks">SKS</div>
       <div class="mall">Mall</div>
     </div>
   </a>
 
-  <!-- MENU -->
+  <!-- 🔍 RIGHT (MOBILE ONLY) -->
+  <div class="search-icon mobile-only" onclick="toggleSearch()">🔍</div>
+
+  <!-- 💻 DESKTOP MENU (UNCHANGED) -->
   <nav class="menu desktop-only">
     <a href="/">HOME</a>
     <a href="/category/men">MEN</a>
@@ -23,32 +27,27 @@
     <a href="/category/kids">KIDS</a>
   </nav>
 
-  <!-- RIGHT SIDE -->
-  <div class="nav-right">
-
-    <!-- SEARCH ICON -->
+  <!-- 💻 DESKTOP RIGHT SIDE (UNCHANGED) -->
+  <div class="nav-right desktop-only">
     <div class="search-icon" onclick="toggleSearch()">🔍</div>
 
     {% if session.get("username") %}
-      <span class="nav-user desktop-only">👤 {{ session["username"] }}</span>
+      <span class="nav-user">👤 {{ session["username"] }}</span>
 
-      <!-- 👑 ADMIN LINK -->
       {% if session.get("role") == "admin" %}
-        <a href="/admin/dashboard" class="desktop-only">👑 Admin</a>
+        <a href="/admin/dashboard">👑 Admin</a>
       {% endif %}
 
-      <a class="desktop-only" href="/logout">Logout</a>
+      <a href="/logout">Logout</a>
     {% else %}
-      <a class="desktop-only" href="javascript:void(0)" onclick="openLogin()">Profile</a>
+      <a href="javascript:void(0)" onclick="openLogin()">Profile</a>
     {% endif %}
 
     <a href="/wishlist">❤️</a>
     <a href="/cart">🛒 {{ session.get("cart", {})|length }}</a>
-
   </div>
 
 </header>
-
 <!-- SEARCH OVERLAY -->
 <div id="searchBar" class="search-overlay">
   <div class="search-box">
@@ -179,7 +178,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   input.addEventListener("keydown", e => {
     if (e.key === "Enter") {
-      window.location = "/search?q=" + encodeURIComponent(input.value);
+      window.location = "/?q=" + encodeURIComponent(input.value);
     }
   });
 

@@ -2,80 +2,108 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SKS Mall</title>
+  <title>Mall SKS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-  <!-- 🔥 LOADER CSS -->
+  <!-- 🔥 Loader CSS -->
   <style>
+    /* Loader overlay */
     #pageLoader {
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255,255,255,0.95);
+      display: flex;
       align-items: center;
+      justify-content: center;
       z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.4s ease;
     }
 
+    /* Loader box */
+    .loader-box {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+
+    /* Spinner circle */
     .spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid #ffc0cb;
-      border-top: 5px solid #ff1493;
+      width: 100px;
+      height: 100px;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #ff2e63; /* pink */
       border-radius: 50%;
-      animation: spin 0.6s linear infinite;
+      animation: spin 1s linear infinite;
+    }
+
+    /* Logo in center */
+    .loader-box img.loader-logo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 
+  <!-- Your site CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-
 <body>
 
-  <!-- ✅ PAGE LOADER -->
+  <!-- 🔥 PAGE LOADER -->
   <div id="pageLoader">
-    <div class="spinner"></div>
+    <div class="loader-box">
+      <div class="spinner"></div>
+      <img class="loader-logo" src="https://image2url.com/r2/default/images/1769949284478-5cbbd602-d8ed-4067-afcb-2263ae95ce07.jpg" alt="Logo">
+    </div>
   </div>
 
-  <!-- HEADER -->
+  <!-- Header -->
   {% include "header.html" %}
 
-  <!-- PAGE CONTENT -->
+  <!-- Page content -->
   {% block content %}{% endblock %}
 
-
-  <!-- 🔥 PAGE TRANSITION JS -->
+  <!-- 🔥 Loader JS -->
   <script>
-    document.querySelectorAll("a").forEach(link => {
+    // Hide loader after page fully loads
+    window.addEventListener("load", function() {
+      const loader = document.getElementById("pageLoader");
+      if(loader) {
+        loader.style.opacity = 0;
+        setTimeout(() => { loader.style.display = "none"; }, 400); // fade out
+      }
+    });
 
-      link.addEventListener("click", function (e) {
+    // Show loader on link clicks
+    document.addEventListener("DOMContentLoaded", function() {
+      document.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", function(e) {
+          const href = this.getAttribute("href");
+          if(!href || href.startsWith("#") || href.startsWith("javascript")) return;
 
-        const href = link.getAttribute("href");
+          e.preventDefault();
+          const loader = document.getElementById("pageLoader");
+          if(loader) {
+            loader.style.display = "flex";
+            loader.style.opacity = 1;
+          }
 
-        // skip invalid links
-        if (!href || href.startsWith("#") || href.includes("javascript")) return;
-
-        e.preventDefault();
-
-        const loader = document.getElementById("pageLoader");
-        loader.style.display = "flex";
-
-        setTimeout(() => {
-          window.location.href = href;
-        }, 500);
-
+          setTimeout(() => { window.location.href = href; }, 300);
+        });
       });
-
     });
   </script>
-
 </body>
 </html>
