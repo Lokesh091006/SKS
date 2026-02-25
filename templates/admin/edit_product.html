@@ -47,6 +47,12 @@
     <input name="price" value="{{ product.price }}">
     <input name="category" value="{{ product.category }}">
 
+     <h4>Stock</h4>
+     <input type="number" name="stock_s" value="{{ product.stock_s or 0 }}" min="0">
+<input type="number" name="stock_m" value="{{ product.stock_m or 0 }}" min="0">
+<input type="number" name="stock_l" value="{{ product.stock_l or 0 }}" min="0">
+  
+
     <button>Update</button>
   </form>
 </div>

@@ -10,6 +10,7 @@ from models.product import Product
 from models.user import User
 from models.address import Address
 from models.order import Order
+from models.productsize import ProductSize
 
 from sqlalchemy import or_
 from functools import wraps
@@ -150,13 +151,18 @@ def firebase_login():
 
 
 
-
 @app.route("/profile")
 def profile():
-    if "username" not in session:
+    if "user_id" not in session:
         session["show_login"] = True
         return redirect(url_for("home"))
-    return render_template("profile.html")
+
+    user = User.query.get(session["user_id"])
+    if not user:
+        session.clear()
+        return redirect(url_for("home"))
+
+    return render_template("profile.html", user=user)
 
 
 
@@ -231,15 +237,29 @@ def set_username():
 
 @app.route("/edit-profile", methods=["GET", "POST"])
 def edit_profile():
-    if "username" not in session:
+    if "user_id" not in session:
         session["show_login"] = True
         return redirect(url_for("home"))
+
+    user = User.query.get(session["user_id"])
+    if not user:
+        session.clear()
+        return redirect(url_for("home"))
+
     if request.method == "POST":
-        session["username"] = request.form.get("username")
-        session["email"] = request.form.get("email")
-        session["mobile"] = request.form.get("mobile")
+        user.username = request.form.get("username")
+        user.email = request.form.get("email")
+        user.mobile = request.form.get("mobile")
+        db.session.commit()
+
+        # session update
+        session["username"] = user.username
+        session["email"] = user.email
+        session["mobile"] = user.mobile
+
         return redirect(url_for("profile"))
-    return render_template("edit_profile.html")
+
+    return render_template("edit_profile.html", user=user)
 
 
 @app.route("/wishlist")
@@ -498,28 +518,48 @@ def clear_cart():
 
 @app.route("/add/<int:product_id>")
 def add_to_cart(product_id):
+
     cart = session.get("cart", {})
     pid = str(product_id)
 
-    # ⚡ IMPORTANT: read size from request.args
     size = request.args.get("size")
-    
-    # ❌ if user didn't select size, block
+
+    # ❌ size lekapothe block
     if not size:
         flash("Please select a size before adding to cart!", "error")
         return redirect(request.referrer or "/")
 
-    # check if same product + same size already in cart
+    # 🔥 STEP 9 START (STOCK CHECK)
+    size_item = ProductSize.query.filter_by(
+        product_id=product_id,
+        size=size
+    ).first()
+
+    if not size_item or size_item.stock <= 0:
+        flash("Out of stock ❌", "error")
+        return redirect(request.referrer or "/")
+    # 🔥 STEP 9 END
+
+    # cart key
     cart_key = f"{pid}_{size}"
+
+    # already exists
     if cart_key in cart:
+
+        # 🔥 check if adding exceeds stock
+        if cart[cart_key]["qty"] >= size_item.stock:
+            flash("Maximum stock reached ⚠️", "error")
+            return redirect(request.referrer or "/")
+
         cart[cart_key]["qty"] += 1
+
     else:
         cart[cart_key] = {"qty": 1, "size": size}
 
     session["cart"] = cart
+
     flash("Product added to cart ✅", "success")
     return redirect(url_for("cart"))
-
 
 
 
@@ -650,22 +690,27 @@ def admin_dashboard():
 )
 
 
+
+
 @app.route("/admin/add-product", methods=["GET", "POST"])
 @role_required("admin")
 def add_product():
     if request.method == "POST":
+
+        # ===== FORM DATA =====
         name = request.form["name"]
         price = request.form["price"]
         category = request.form["category"]
-        sizes = request.form.get("sizes")
+        sizes = request.form.get("sizes")      # S,M,L
+        stocks = request.form.get("stocks")    # 5,0,3
         type_ = request.form.get("type")
         brand = request.form.get("brand")
-        print("BRAND:", brand)  # debug
+
         img1 = request.files["image1"]
         img2 = request.files.get("image2")
         img3 = request.files.get("image3")
 
-        # IMAGE 1 (mandatory)
+        # ===== IMAGE 1 (Required) =====
         img1_path = None
         if img1 and img1.filename != "":
             filename1 = img1.filename
@@ -673,7 +718,7 @@ def add_product():
             img1.save(path1)
             img1_path = "uploads/" + filename1
 
-        # IMAGE 2 (optional)
+        # ===== IMAGE 2 (Optional) =====
         img2_path = None
         if img2 and img2.filename != "":
             filename2 = img2.filename
@@ -681,7 +726,7 @@ def add_product():
             img2.save(path2)
             img2_path = "uploads/" + filename2
 
-        # IMAGE 3 (optional)
+        # ===== IMAGE 3 (Optional) =====
         img3_path = None
         if img3 and img3.filename != "":
             filename3 = img3.filename
@@ -689,26 +734,44 @@ def add_product():
             img3.save(path3)
             img3_path = "uploads/" + filename3
 
-        # SAVE PRODUCT
+        # ===== SAVE PRODUCT =====
         new_product = Product(
             name=name,
             price=price,
             category=category,
-            sizes=sizes,
+            sizes=sizes,   # optional (can remove later)
             type=type_,
-            brand=brand,   
+            brand=brand,
             image=img1_path,
             image2=img2_path,
             image3=img3_path
         )
 
         db.session.add(new_product)
-        db.session.commit()
+        db.session.commit()   # ⚠️ Important (ID generate avvali)
+
+        # ===== SAVE SIZES WITH STOCK =====
+        if sizes and stocks:
+
+            size_list = sizes.split(",")      # ["S","M","L"]
+            stock_list = stocks.split(",")    # ["5","0","3"]
+
+            if len(size_list) != len(stock_list):
+                return "Sizes and Stocks count mismatch ❌"
+
+            for i in range(len(size_list)):
+                ps = ProductSize(
+                    product_id=new_product.id,
+                    size=size_list[i].strip(),
+                    stock=int(stock_list[i])
+                )
+                db.session.add(ps)
+
+            db.session.commit()
 
         return redirect("/admin/dashboard")
 
     return render_template("admin/add_product.html")
-
 
 @app.route("/admin/products")
 @role_required("admin")
@@ -731,14 +794,34 @@ def edit_product(id):
     product = Product.query.get_or_404(id)
 
     if request.method == "POST":
+        # 🔹 Basic details update
         product.name = request.form["name"]
         product.price = request.form["price"]
         product.category = request.form["category"]
 
+        # 🔹 Fetch all sizes for this product
+        sizes = ProductSize.query.filter_by(product_id=id).all()
+
+        # 🔥 UPDATE STOCK BASED ON SIZE
+        for s in sizes:
+            if s.size == "S":
+                s.stock = int(request.form.get("stock_s") or 0)
+
+            elif s.size == "M":
+                s.stock = int(request.form.get("stock_m") or 0)
+
+            elif s.size == "L":
+                s.stock = int(request.form.get("stock_l") or 0)
+
+        # 🔥 SAVE ALL CHANGES
         db.session.commit()
-        return redirect("/admin/products")
+
+        # 🔹 Redirect back to manage page
+        return redirect(url_for("manage_products"))
 
     return render_template("admin/edit_product.html", product=product)
+
+    
 
 
 
@@ -799,7 +882,7 @@ def payment_success():
 
     for pid, item in cart.items():
 
-        # split product & size safely
+        # ---- SPLIT PRODUCT ID & SIZE ----
         if "_" in pid:
             try:
                 product_id, size = pid.split("_")
@@ -810,12 +893,32 @@ def payment_success():
             product_id = int(pid)
             size = None
 
-        # quantity
+        # ---- GET QUANTITY ----
         if isinstance(item, dict):
             qty = item.get("qty", 1)
         else:
             qty = item
 
+        # ==================================================
+        # 🔥 STOCK CHECK + REDUCE (VERY IMPORTANT)
+        # ==================================================
+        if size:
+            size_obj = ProductSize.query.filter_by(
+                product_id=product_id,
+                size=size
+            ).first()
+
+            # ❌ If size not found or insufficient stock
+            if not size_obj or size_obj.stock < qty:
+                flash(f"{size} size is out of stock ❌", "error")
+                return redirect("/cart")
+
+            # ✅ Reduce stock
+            size_obj.stock -= qty
+
+        # ==================================================
+        # 🔥 CREATE ORDER RECORDS
+        # ==================================================
         for _ in range(qty):
             order = Order(
                 order_id="ORD" + str(int(time.time()*1000)),
@@ -830,8 +933,10 @@ def payment_success():
             db.session.flush()
             created_ids.append(order.id)
 
+    # ---- SAVE STOCK + ORDERS ----
     db.session.commit()
 
+    # ---- FETCH CREATED ORDERS ----
     orders = Order.query.options(
         joinedload(Order.product),
         joinedload(Order.address)
@@ -839,6 +944,7 @@ def payment_success():
 
     final_amount = session.get("total_after_coupon", 0)
 
+    # ---- CLEAR SESSION CART ----
     session.pop("cart", None)
     session.pop("total_after_coupon", None)
 
@@ -953,7 +1059,9 @@ def confirm_order():
 @app.route("/product/<int:pid>")
 def product_page(pid):
     product = Product.query.get_or_404(pid)
-    return render_template("product.html", product=product)
+    sizes = ProductSize.query.filter_by(product_id=pid).all()
+
+    return render_template("product.html", product=product, sizes=sizes)
 
 @app.route("/quick-pay/<int:pid>")
 def quick_pay(pid):

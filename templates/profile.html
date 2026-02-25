@@ -110,10 +110,10 @@
     <!-- TOP -->
     <div class="profile-top">
         <div class="profile-avatar">
-            {{ session["username"][0] | upper }}
+            {{ user.username[0] | upper }}
         </div>
         <div>
-            <h2>{{ session["username"] }}</h2>
+            <h2>{{ user.username }}</h2>
             <p>Welcome to Mall SKS 👋</p>
         </div>
     </div>
@@ -121,50 +121,48 @@
     <!-- USER DETAILS -->
     <div class="profile-card profile-info">
         <h3>My Details</h3>
-        <p><b>Username:</b> {{ session["username"] }}</p>
-        <p><b>Mobile:</b> {{ session.get("mobile", "Not added") }}</p>
-        <p><b>Email:</b> {{ session.get("email", "Not added") }}</p>
-        <a href="/edit-profile" style="color:#ff3f6c;font-weight:600;">
-    ✏️ Edit Profile
-</a>
-
+        <p><b>Username:</b> {{ user.username }}</p>
+        <p><b>Mobile:</b> {{ user.mobile or "Not added" }}</p>
+        <p><b>Email:</b> {{ user.email or "Not added" }}</p>
+        <a href="{{ url_for('edit_profile') }}" style="color:#ff3f6c;font-weight:600;">
+            ✏️ Edit Profile
+        </a>
     </div>
 
     <!-- ADDRESS -->
     <div class="profile-card">
         <h3>Saved Address</h3>
-        {% if session.get("address") %}
-            <p>{{ session["address"] }}</p>
+        {% if user.address %}
+            <p>{{ user.address }}</p>
         {% else %}
             <p style="color:#777;">No address saved</p>
-            <a href="/address" style="color:#ff3f6c;">+ Add Address</a>
+            <a href="{{ url_for('address') }}" style="color:#ff3f6c;">+ Add Address</a>
         {% endif %}
     </div>
 
     <!-- MENU -->
     <div class="profile-menu">
         <a href="{{ url_for('my_orders') }}">
-
             📦 My Orders
             <span>›</span>
         </a>
 
-        <a href="/wishlist">
+        <a href="{{ url_for('wishlist') }}">
             ❤️ Wishlist
             <span>›</span>
         </a>
 
-        <a href="/cart">
+        <a href="{{ url_for('cart') }}">
             🛒 Cart
             <span>›</span>
         </a>
 
-        <a href="/contact">
+        <a href="{{ url_for('contact') }}">
             🎧 Help Center
             <span>›</span>
         </a>
 
-        <a href="/logout" class="logout">
+        <a href="{{ url_for('logout') }}" class="logout">
             🚪 Logout
             <span>›</span>
         </a>

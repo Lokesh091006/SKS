@@ -48,6 +48,11 @@
 
         <h1 class="product-title">{{ product.name }}</h1>
         <p class="product-price">₹ {{ product.price }}</p>
+        {% set all_out = sizes|selectattr("stock", "equalto", 0)|list|length == sizes|length %}
+
+{% if all_out %}
+<p style="color:red; font-weight:bold;">Sold Out 🔥</p>
+{% endif %}
         <p class="product-desc">
             Premium quality {{ product.name }} with modern fit.  
             Perfect for daily wear and special occasions.
@@ -56,22 +61,20 @@
         <!-- SIZE SELECTION -->
         <div class="size-box">
             <label>Select Size:</label>
-            <div class="sizes">
-                {% if product.category == "men" and product.type in ["tshirt", "shirt"] %}
-                    <span class="size">S</span>
-                    <span class="size">M</span>
-                    <span class="size">L</span>
-                    <span class="size">XL</span>
-                    <span class="size">XXL</span>
-                {% endif %}
-                {% if product.category == "men" and product.type == "pant" %}
-                    <span class="size">28</span>
-                    <span class="size">30</span>
-                    <span class="size">32</span>
-                    <span class="size">34</span>
-                    <span class="size">36</span>
-                {% endif %}
-            </div>
+          <div class="sizes">
+    {% for s in sizes %}
+        
+        {% if s.stock > 0 %}
+            <span class="size">{{ s.size }}</span>
+        
+        {% else %}
+            <span class="size sold">
+                {{ s.size }} ❌
+            </span>
+        {% endif %}
+    
+    {% endfor %}
+</div>
             <input type="hidden" name="size" id="selectedSize">
         </div>
 
@@ -86,9 +89,7 @@
         </div>
 
         <!-- DELIVERY -->
-        <p class="delivery">
-            🚚 Estimated delivery in <b>3–5 days</b>
-        </p>
+        
 
         <!-- ACTION BUTTONS -->
         <div class="product-buttons">
@@ -100,14 +101,19 @@
 </div>
 
 <!-- CART -->
-<a href="#" id="addToCartBtn" class="btn-cart">
+
+
+<a href="#" id="addToCartBtn" class="btn-cart"
+   {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
     🛒 
 </a>
 
-<!-- BUY NOW -->
-<a href="#" id="buyNowBtn" class="btn-buy">
+<a href="#" id="buyNowBtn" class="btn-buy"
+   {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
      Buy Now
 </a>
+
+
 
 
         </div>
@@ -115,8 +121,10 @@
         <!-- FEATURES -->
         <ul class="features">
             <li>✔ 100% Original Products</li>
-            <li>✔ Easy 7 Days Return</li>
+            
             <li>✔ Cash on Delivery Available</li>
+
+            
         </ul>
 
     </div>
@@ -222,6 +230,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    document.querySelectorAll(".size").forEach(el=>{
+        if(el.classList.contains("sold")){
+            el.onclick = function(){
+                alert("This size is sold out ❌");
+            }
+        }
+    });
+
+});
+
 </script>
 
 </body>
