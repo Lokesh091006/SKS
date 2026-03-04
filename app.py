@@ -1,8 +1,5 @@
-import random
-import re
-import requests
-import os
-import time
+import random,re,time,requests,os
+
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
@@ -16,6 +13,8 @@ from sqlalchemy import or_
 from functools import wraps
 from flask import flash 
 from sqlalchemy.orm import joinedload
+
+
    
 
 
@@ -30,6 +29,56 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'shop.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.secret_key = "sks_super_secret_key_123"
+
+
+def send_whatsapp_otp(mobile, otp):
+    import os, requests
+
+    authkey = os.getenv("MSG91_AUTHKEY")
+
+    url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/"
+
+    payload = {
+        "integrated_number": "918897112492",
+        "content_type": "template",
+        "payload": {
+            "messaging_product": "whatsapp",
+            "type": "template",
+            "template": {
+                "name": "kalasilks",
+                "language": {
+                    "code": "en",
+                    "policy": "deterministic"
+                },
+                "namespace": "4141e79d_649d_402a_8391_fbd98e195512",
+                "to_and_components": [
+                    {
+                        "to": ["91" + mobile],
+                        "components": {
+                            "body_1": {
+                                "type": "text",
+                                "value": otp
+                            },
+                            "button_1": {
+                                "subtype": "url",
+                                "type": "text",
+                                "value": otp
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "authkey": "492924AXbfGrlq9U69870853P1"
+    }
+
+    r = requests.post(url, json=payload, headers=headers, timeout=15)
+    print("MSG91 RESPONSE:", r.status_code, r.text)
+    return r.text
 
 db.init_app(app)
 
@@ -168,15 +217,29 @@ def profile():
 
 
 
+import time, re, random
+from werkzeug.security import generate_password_hash, check_password_hash
+
+OTP_TTL = 300  # 5 minutes
+
 @app.route("/send-otp", methods=["POST"])
 def send_otp():
-    mobile = request.form.get("mobile")
+    mobile = request.form.get("mobile", "").strip()
+
     if not mobile or not re.fullmatch(r"\d{10}", mobile):
         return "Invalid mobile number"
+
     otp = str(random.randint(100000, 999999))
-    session["login_otp"] = otp
+
+    # ✅ store hash + expiry (not plain otp)
+    session["login_otp_hash"] = generate_password_hash(otp)
     session["login_mobile"] = mobile
-    send_sms_otp(mobile, otp)
+    session["login_otp_exp"] = int(time.time()) + OTP_TTL
+    session["otp_last_sent"] = int(time.time())
+
+    # ✅ WhatsApp send (for now keep your function name)
+    send_whatsapp_otp(mobile, otp)   # <-- replace send_sms_otp with this
+
     print("DEBUG OTP:", otp)
     return redirect(url_for("verify_otp"))
 
@@ -184,25 +247,35 @@ def send_otp():
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
     if request.method == "POST":
-        entered = request.form.get("otp")
-        saved = session.get("login_otp")
-        mobile = session.get("login_mobile")
+        entered = request.form.get("otp", "").strip()
 
-        if not saved or not mobile:
+        otp_hash = session.get("login_otp_hash")
+        mobile = session.get("login_mobile")
+        exp = session.get("login_otp_exp")
+
+        if not otp_hash or not mobile or not exp:
             return redirect("/")
 
-        if entered != saved:
+        # ✅ expiry check
+        if int(time.time()) > int(exp):
+            session.pop("login_otp_hash", None)
+            session.pop("login_otp_exp", None)
+            return "⌛ OTP expired. Please try again."
+
+        # ✅ hash verify
+        if not check_password_hash(otp_hash, entered):
             return "❌ Wrong OTP"
 
+        # ✅ success: clear otp data
+        session.pop("login_otp_hash", None)
+        session.pop("login_otp_exp", None)
         
-        session.pop("login_otp")
-        user = User.query.filter_by(mobile=mobile).first()
 
+
+        user = User.query.filter_by(mobile=mobile).first()
         if not user:
-            
             return redirect(url_for("set_username"))
 
-        
         session["username"] = user.username
         session["user_id"] = user.id
         session["role"] = user.role
@@ -210,10 +283,40 @@ def verify_otp():
         session.pop("show_login", None)
         next_page = session.pop("next", url_for("home"))
         return redirect(next_page)
+    
+    
+    exp = session.get("login_otp_exp")
+    return render_template("verify_otp.html", otp_exp=exp)
 
-    return render_template("verify_otp.html")
 
+RESEND_COOLDOWN = 30  # seconds
 
+@app.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    mobile = session.get("login_mobile")
+       
+    exp = session.get("login_otp_exp")
+
+    if not mobile or not exp:
+        return redirect(url_for("login"))
+
+    now = int(time.time())
+
+    # ✅ time ayye varaku resend block
+    if now < int(exp):
+        wait_more = int(exp) - now
+        # same verify page ki back pampu (simple message)
+        return f"OTP still valid. Wait {wait_more} seconds and try resend."
+
+    # ✅ expired -> new OTP generate
+    otp = str(random.randint(100000, 999999))
+    session["login_otp_hash"] = generate_password_hash(otp)
+    session["login_otp_exp"] = now + OTP_TTL
+
+    send_whatsapp_otp(mobile, otp)
+    print("RESEND OTP:", otp)
+
+    return redirect(url_for("verify_otp"))
 @app.route("/set-username", methods=["GET", "POST"])
 def set_username():
     mobile = session.get("login_mobile")
@@ -606,42 +709,75 @@ def address():
     addresses = Address.query.filter_by(user_id=user_id).all()
     return render_template("address.html", addresses=addresses)
 
-@app.route("/add-address", methods=["GET", "POST"])
-def add_address():
-    if "user_id" not in session:
-        return redirect(url_for("home"))
-
-    if request.method == "POST":
-        addr = Address(
-            user_id=session["user_id"],
-            name=request.form["name"],
-            mobile=request.form["mobile"],
-            house=request.form["house"],
-            street=request.form["street"],
-            city=request.form["city"],
-            state=request.form["state"],
-            pincode=request.form["pincode"]
-        )
-        db.session.add(addr)
-        db.session.commit()
-        return redirect(url_for("address"))
-
-    return render_template("add_address.html")
-
 @app.route("/delete-address/<int:id>")
 def delete_address(id):
     if "user_id" not in session:
         return redirect(url_for("home"))
 
-    addr = Address.query.get(id)
+    # 🔒 Only delete if address belongs to logged-in user
+    addr = Address.query.filter_by(
+        id=id,
+        user_id=session["user_id"]
+    ).first()
+
     if addr:
         db.session.delete(addr)
         db.session.commit()
+
     return redirect(url_for("address"))
 
 
 
 
+
+
+
+
+PIN_RE = re.compile(r"^[1-9][0-9]{5}$")
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/120.0 Safari/537.36",
+    "Accept": "application/json,text/plain,*/*",
+}
+
+@app.route("/api/pincode/<pin>")
+def api_pincode(pin):
+    pin = (pin or "").strip()
+
+    if not PIN_RE.match(pin):
+        return jsonify({"ok": False, "error": "Invalid pincode"}), 400
+
+    url = f"https://api.postalpincode.in/pincode/{pin}"
+
+    last_err = None
+    for attempt in range(1, 4):  # ✅ 3 retries
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=10)
+            r.raise_for_status()
+            data = r.json()
+
+            if data and data[0].get("Status") == "Success":
+                post_offices = data[0].get("PostOffice") or []
+                first = post_offices[0] if post_offices else {}
+
+                return jsonify({
+                    "ok": True,
+                    "city": first.get("District", ""),
+                    "state": first.get("State", ""),
+                    "post_offices": [po.get("Name", "") for po in post_offices]
+                })
+
+            return jsonify({"ok": False, "error": "Pincode not found"}), 404
+
+        except requests.exceptions.RequestException as e:
+            last_err = e
+            # small delay before retry
+            time.sleep(0.4 * attempt)
+
+    print("PINCODE ROUTE ERROR (after retries):", repr(last_err))
+    return jsonify({"ok": False, "error": "Pincode provider unstable, try again"}), 503
 
 
 

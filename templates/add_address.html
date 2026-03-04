@@ -86,6 +86,8 @@
         <input type="text" name="mobile" placeholder="10 Digit Mobile Number"
                pattern="[0-9]{10}" required>
 
+        <input type="email" name="email" placeholder="Email" required>
+
         <textarea name="house" placeholder="House No, Building, Street"
                   rows="2" required></textarea>
 
@@ -93,13 +95,17 @@
                   rows="2" required></textarea>
 
         <div class="row">
-            <input type="text" name="city" placeholder="City" required>
-            <input type="text" name="state" placeholder="State" required>
+            <input type="text" name="city" id="city" placeholder="City" required>
+            <input type="text" name="state" id="state" placeholder="State" required>
         </div>
 
-        <input type="text" name="pincode"
-               placeholder="Pincode"
-               pattern="[0-9]{6}" required>
+        <input type="text" name="pincode" id="pincode"
+       placeholder="Pincode"
+       maxlength="6"
+       inputmode="numeric"
+       pattern="[0-9]{6}" required>
+
+<small id="pinMsg" style="display:block;margin-top:-10px;margin-bottom:10px;"></small>
 
         <button type="submit">
             Save Address →
@@ -108,6 +114,63 @@
     </form>
 
 </div>
+
+
+
+<script>
+const pin = document.getElementById("pincode");
+const city = document.getElementById("city");
+const state = document.getElementById("state");
+const msg = document.getElementById("pinMsg");
+
+let timer = null;
+
+let lastPin = "";
+
+pin.addEventListener("input", () => {
+  // only digits & max 6
+  pin.value = pin.value.replace(/\D/g, "").slice(0, 6);
+
+  // reset
+  msg.textContent = "";
+  msg.style.color = "";
+  
+  // city/state clear only when typing incomplete pin
+  if (pin.value.length < 6) {
+    return;
+  }
+
+  if (pin.value === lastPin) return;  // same pin malli call cheyyakunda
+lastPin = pin.value;
+
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    msg.textContent = "Checking pincode...";
+    msg.style.color = "#555";
+
+    try {
+      const res = await fetch(`/api/pincode/${pin.value}`);
+      const data = await res.json();
+
+      if (!data.ok) {
+        city.value = "";
+        state.value = "";
+        msg.textContent = data.error || "Invalid pincode";
+        msg.style.color = "red";
+        return;
+      }
+
+      city.value = data.city || "";
+      state.value = data.state || "";
+      msg.textContent = "✅ Pincode verified";
+      msg.style.color = "green";
+    } catch (e) {
+      msg.textContent = "Pincode service error";
+      msg.style.color = "red";
+    }
+  }, 300);
+});
+</script>
 
 </body>
 </html>

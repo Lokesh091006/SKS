@@ -113,18 +113,31 @@
             <label>
                 <input type="radio" name="address_id" value="{{ addr.id }}" required>
 
-                <div class="address-details">
-                    <b>{{ addr.name }}</b><br>
-                    📞 {{ addr.mobile }}<br>
-                    {{ addr.house }}, {{ addr.street }}<br>
-                    {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
-                </div>
+               <div class="address-details">
+  <b>{{ addr.name }}</b><br>
+  📞 {{ addr.mobile }}<br>
+
+  {% if addr.email %}
+    ✉️ {{ addr.email }}<br>
+  {% endif %}
+
+  {{ addr.house }}, {{ addr.street }}<br>
+  {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
+</div>
             </label>
 
             <div class="address-actions">
-                <span></span>
-                <a href="/delete-address/{{ addr.id }}" class="delete-btn">Delete</a>
-            </div>
+    <span></span>
+
+    <button type="submit"
+            class="delete-btn"
+            style="background:none;border:none;color:red;cursor:pointer;"
+            formaction="/delete-address/{{ addr.id }}"
+            formmethod="post"
+            onclick="return confirm('Delete this address?')">
+        Delete
+    </button>
+</div>
         </div>
         {% endfor %}
 

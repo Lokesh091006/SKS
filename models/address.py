@@ -5,6 +5,7 @@ class Address(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     name = db.Column(db.String(100))
     mobile = db.Column(db.String(10))
+    email = db.Column(db.String(120)) 
     house = db.Column(db.String(200))
     street = db.Column(db.String(200))
     city = db.Column(db.String(100))

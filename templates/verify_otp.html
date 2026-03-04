@@ -6,6 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .timer {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #ff2e63;
+        }
+
+        .resend-btn {
+            margin-top: 10px;
+            background: #ccc;
+            border: none;
+            padding: 8px 15px;
+            cursor: not-allowed;
+        }
+
+        .resend-btn.active {
+            background: #ff2e63;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
@@ -16,19 +38,69 @@
         <h2>Verify OTP</h2>
         <p>OTP sent to your mobile number</p>
 
-        <form method="post" action="/verify-otp">
+        <!-- OTP FORM -->
+        <form method="POST" action="/verify-otp">
             <input type="text"
                    name="otp"
-                   placeholder="Enter OTP"
-                   pattern="[0-9]{4,6}"
+                   placeholder="Enter 6 digit OTP"
+                   pattern="[0-9]{6}"
+                   maxlength="6"
                    required>
 
             <button type="submit">Verify & Login</button>
         </form>
 
-        <a href="/login" class="resend">Resend OTP</a>
+        <!-- TIMER -->
+        <p id="timer" class="timer"></p>
+
+        <!-- RESEND FORM -->
+        <form method="POST" action="/resend-otp">
+            <button id="resendBtn" type="submit" class="resend-btn" disabled>
+                Resend OTP
+            </button>
+        </form>
+
     </div>
 </div>
+
+<script>
+    // 🔥 OTP expiry timestamp (passed from backend)
+    const otpExp = {{ otp_exp or 0 }};
+    const timerEl = document.getElementById("timer");
+    const resendBtn = document.getElementById("resendBtn");
+
+    function updateTimer() {
+        if (!otpExp) {
+            timerEl.innerText = "";
+            resendBtn.disabled = false;
+            resendBtn.classList.add("active");
+            return;
+        }
+
+        const now = Math.floor(Date.now() / 1000);
+        let diff = otpExp - now;
+
+        if (diff > 0) {
+            const minutes = Math.floor(diff / 60);
+            const seconds = diff % 60;
+
+            timerEl.innerText = 
+                `OTP expires in ${minutes}:${String(seconds).padStart(2,'0')}`;
+
+            resendBtn.disabled = true;
+            resendBtn.classList.remove("active");
+
+        } else {
+            timerEl.innerText = "OTP expired. You can resend now ✅";
+
+            resendBtn.disabled = false;
+            resendBtn.classList.add("active");
+        }
+    }
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+</script>
 
 </body>
 </html>
