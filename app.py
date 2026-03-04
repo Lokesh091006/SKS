@@ -709,6 +709,37 @@ def address():
     addresses = Address.query.filter_by(user_id=user_id).all()
     return render_template("address.html", addresses=addresses)
 
+
+
+@app.route("/add-address", methods=["GET", "POST"])
+def add_address():
+    if "user_id" not in session:
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
+        pincode = (request.form.get("pincode") or "").strip()
+
+        # ✅ Indian pincode format check (6 digits)
+        if not PIN_RE.match(pincode):
+            return "Invalid Indian Pincode ❌ (6 digits)", 400
+
+        addr = Address(
+            user_id=session["user_id"],
+            name=request.form.get("name"),
+            mobile=request.form.get("mobile"),
+            email=request.form.get("email"),   # email optional
+            house=request.form.get("house"),
+            street=request.form.get("street"),
+            city=request.form.get("city"),
+            state=request.form.get("state"),
+            pincode=pincode
+        )
+        db.session.add(addr)
+        db.session.commit()
+        return redirect(url_for("address"))
+
+    return render_template("add_address.html")
+
 @app.route("/delete-address/<int:id>")
 def delete_address(id):
     if "user_id" not in session:
