@@ -75,6 +75,9 @@ def send_whatsapp_otp(mobile, otp):
                                 "value": str(otp)
                             },
 
+
+                            "button_1": {"type": "text", "value": str(otp)}
+
                             # ✅ REQUIRED because template has URL button
                            
                         }
@@ -135,12 +138,10 @@ def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, de
                             "body_4": {"type": "text", "value": delivery_days},
                             "body_5": {"type": "text", "value": city},
 
+                            "button_1": {"type": "text", "value": str(order_id)}
 
-                            "button_1": {
-                                "subtype": "url",
-                                "type": "text",
-                                 "value": order_id
-                           }
+
+                           
                         }
                     }
                 ]
