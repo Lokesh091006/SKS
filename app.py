@@ -76,7 +76,10 @@ def send_whatsapp_otp(mobile, otp):
                             },
 
 
-                            "button_1": {"type": "text", "value": str(otp)}
+                            "button_1": {"type": "text",
+                                        "sub_type": "url",
+                                        "value": str(otp)
+                                    }
 
                             # ✅ REQUIRED because template has URL button
                            
