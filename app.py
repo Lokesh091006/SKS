@@ -138,8 +138,11 @@ def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, de
                             "body_4": {"type": "text", "value": delivery_days},
                             "body_5": {"type": "text", "value": city},
 
-                            "button_1": {"type": "text", "value": str(order_id)}
-
+                             "button_1": {
+                                "type": "text",
+                                "sub_type": "url",
+                                "value": str(order_id)
+                            }
 
                            
                         }
