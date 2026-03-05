@@ -31,7 +31,70 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.secret_key = "sks_super_secret_key_123"
 
 
+
+def estimate_delivery_days(address):
+    city = address.city.lower()
+    state = address.state.lower()
+
+    if state == "telangana" or state == "andhra pradesh":
+        return "2-3"
+    elif state in ["tamil nadu", "karnataka"]:
+        return "3-4"
+    else:
+        return "4-6"
+
 def send_whatsapp_otp(mobile, otp):
+    import os, requests
+
+    authkey = os.getenv("MSG91_AUTHKEY")
+    if not authkey:
+        print("❌ MSG91_AUTHKEY missing")
+        return None
+
+    url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/"
+
+    payload = {
+        "integrated_number": "918897112492",
+        "content_type": "template",
+        "payload": {
+            "messaging_product": "whatsapp",
+            "type": "template",
+            "template": {
+                "name": "kalasilks",
+                "language": {"code": "en", "policy": "deterministic"},
+                "namespace": "4141e79d_649d_402a_8391_fbd98e195512",
+                "to_and_components": [
+                    {
+                        "to": ["91" + mobile],
+                        "components": {
+                            "body_1": {"type": "text", "value": otp},
+                            # ⚠️ button variable only if your template actually has URL button
+                            # "button_1": {"subtype": "url", "type": "text", "value": otp}
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    headers = {"Content-Type": "application/json", "authkey": "492924AXbfGrlq9U69870853P1"}
+    r = requests.post(url, json=payload, headers=headers, timeout=15)
+    print("MSG91 OTP:", r.status_code, r.text)
+    return r.text
+
+
+
+
+
+
+
+
+
+
+
+
+
+def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, delivery_days, city):
     import os, requests
 
     authkey = os.getenv("MSG91_AUTHKEY")
@@ -45,7 +108,7 @@ def send_whatsapp_otp(mobile, otp):
             "messaging_product": "whatsapp",
             "type": "template",
             "template": {
-                "name": "kalasilks",
+                "name": "order_confirm_kalasilks_01",
                 "language": {
                     "code": "en",
                     "policy": "deterministic"
@@ -55,15 +118,11 @@ def send_whatsapp_otp(mobile, otp):
                     {
                         "to": ["91" + mobile],
                         "components": {
-                            "body_1": {
-                                "type": "text",
-                                "value": otp
-                            },
-                            "button_1": {
-                                "subtype": "url",
-                                "type": "text",
-                                "value": otp
-                            }
+                            "body_1": {"type": "text", "value": customer_name},
+                            "body_2": {"type": "text", "value": order_id},
+                            "body_3": {"type": "text", "value": str(amount)},
+                            "body_4": {"type": "text", "value": delivery_days},
+                            "body_5": {"type": "text", "value": city}
                         }
                     }
                 ]
@@ -73,12 +132,11 @@ def send_whatsapp_otp(mobile, otp):
 
     headers = {
         "Content-Type": "application/json",
-        "authkey": "492924AXbfGrlq9U69870853P1"
+        "authkey": authkey
     }
 
     r = requests.post(url, json=payload, headers=headers, timeout=15)
-    print("MSG91 RESPONSE:", r.status_code, r.text)
-    return r.text
+    print("MSG91 ORDER:", r.status_code, r.text)
 
 db.init_app(app)
 
@@ -1067,7 +1125,7 @@ def payment_success():
             qty = item
 
         # ==================================================
-        # 🔥 STOCK CHECK + REDUCE (VERY IMPORTANT)
+        # 🔥 STOCK CHECK + REDUCE
         # ==================================================
         if size:
             size_obj = ProductSize.query.filter_by(
@@ -1075,12 +1133,10 @@ def payment_success():
                 size=size
             ).first()
 
-            # ❌ If size not found or insufficient stock
             if not size_obj or size_obj.stock < qty:
                 flash(f"{size} size is out of stock ❌", "error")
                 return redirect("/cart")
 
-            # ✅ Reduce stock
             size_obj.stock -= qty
 
         # ==================================================
@@ -1088,7 +1144,7 @@ def payment_success():
         # ==================================================
         for _ in range(qty):
             order = Order(
-                order_id="ORD" + str(int(time.time()*1000)),
+                order_id="SKS" + str(int(time.time() * 1000)),  # ✅ SKS prefix
                 user_id=session["user_id"],
                 product_id=product_id,
                 address_id=address_id,
@@ -1110,6 +1166,38 @@ def payment_success():
     ).filter(Order.id.in_(created_ids)).all()
 
     final_amount = session.get("total_after_coupon", 0)
+
+    # ==================================================
+    # ✅ SEND WHATSAPP ORDER CONFIRMATION (UTILITY)
+    # ==================================================
+    try:
+        user = User.query.get(session["user_id"])
+        address = Address.query.get(address_id)
+
+        customer_name = (user.username or "Customer") if user else "Customer"
+        customer_mobile = (user.mobile or "") if user else ""
+
+        # ✅ city
+        city = (address.city or "").strip() if address else ""
+
+        # ✅ delivery days (simple default)
+        # later: address.state / pincode batti advanced ga cheddam
+        delivery_days = "2-3"
+
+        # ✅ one order id for confirmation
+        order_no = orders[0].order_id if orders else "SKSORDER"
+
+        if customer_mobile:
+            send_whatsapp_order_confirmation(
+                customer_mobile,
+                customer_name,
+                order_no,
+                final_amount,
+                delivery_days,
+                city or "Your City"
+            )
+    except Exception as e:
+        print("Order WhatsApp send failed:", e)
 
     # ---- CLEAR SESSION CART ----
     session.pop("cart", None)
