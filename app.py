@@ -61,15 +61,26 @@ def send_whatsapp_otp(mobile, otp):
             "type": "template",
             "template": {
                 "name": "kalasilks",
-                "language": {"code": "en", "policy": "deterministic"},
+                "language": {
+                    "code": "en",
+                    "policy": "deterministic"
+                },
                 "namespace": "4141e79d_649d_402a_8391_fbd98e195512",
                 "to_and_components": [
                     {
                         "to": ["91" + mobile],
                         "components": {
-                            "body_1": {"type": "text", "value": otp},
-                            # ⚠️ button variable only if your template actually has URL button
-                            # "button_1": {"subtype": "url", "type": "text", "value": otp}
+                            "body_1": {
+                                "type": "text",
+                                "value": str(otp)
+                            },
+
+                            # ✅ REQUIRED because template has URL button
+                            "button_1": {
+                                "subtype": "url",
+                                "type": "text",
+                                "value": str(otp)
+                            }
                         }
                     }
                 ]
@@ -77,11 +88,15 @@ def send_whatsapp_otp(mobile, otp):
         }
     }
 
-    headers = {"Content-Type": "application/json", "authkey": "492924AXbfGrlq9U69870853P1"}
+    headers = {
+        "Content-Type": "application/json",
+        "authkey": authkey
+    }
+
     r = requests.post(url, json=payload, headers=headers, timeout=15)
     print("MSG91 OTP:", r.status_code, r.text)
-    return r.text
 
+    return r.text
 
 
 
