@@ -236,25 +236,42 @@ def send_welcome_email(user):
     return r.text
 
 
+
 def send_order_email(user, order_id, amount):
+    import os
+    import requests
 
-    html = f"""
-    <h2>Order Confirmed ✅</h2>
+    authkey = os.getenv("MSG91_AUTHKEY")
 
-    <p>Hello {user.username or "Customer"},</p>
+    url = "https://control.msg91.com/api/v5/email/send"
 
-    <p>Your order <b>{order_id}</b> has been placed successfully.</p>
+    headers = {
+        "authkey": authkey,
+        "Content-Type": "application/json"
+    }
 
-    <p>Total Amount: ₹{amount}</p>
+    payload = {
+        "to": [
+            {
+                "email": user.email,
+                "name": user.username or "Customer"
+            }
+        ],
+        "from": {
+            "name": "Sri Kala Silks",
+            "email": "support@kalasilks.com"
+        },
+        "template_id": "confirmation_order",
+        "variables": {
+            "name": user.username or "Customer",
+            "order_id": order_id,
+            "amount": amount
+        }
+    }
 
-    <p>Thank you for shopping with Sri Kala Silks.</p>
-    """
-
-    send_email_msg91(
-        user.email,
-        "Order Confirmed - Sri Kala Silks",
-        html
-    )
+    r = requests.post(url, json=payload, headers=headers, timeout=20)
+    print("ORDER EMAIL STATUS:", r.status_code, r.text)
+    return r.text
 db.init_app(app)
 
 
