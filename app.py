@@ -159,6 +159,102 @@ def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, de
     r = requests.post(url, json=payload, headers=headers, timeout=15)
     print("MSG91 ORDER:", r.status_code, r.text)
 
+
+
+
+
+
+
+
+
+
+def send_email_msg91(to_email, subject, html_body):
+    import os
+    import requests
+
+    authkey = os.getenv("MSG91_AUTHKEY")
+
+    url = "https://control.msg91.com/api/v5/email/send"
+
+    headers = {
+        "authkey": authkey,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "to": [
+            {
+                "email": to_email
+            }
+        ],
+        "from": {
+            "name": "Sri Kala Silks",
+            "email": "support@kalasilks.com"
+        },
+        "subject": subject,
+        "body": {
+            "type": "text/html",
+            "data": html_body
+        }
+    }
+
+    r = requests.post(url, json=payload, headers=headers, timeout=20)
+    print("EMAIL STATUS:", r.status_code, r.text)
+    return r.text
+def send_welcome_email(user):
+    import os
+    import requests
+
+    authkey = os.getenv("MSG91_AUTHKEY")
+
+    url = "https://control.msg91.com/api/v5/email/send"
+
+    headers = {
+        "authkey": authkey,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "to": [
+            {
+                "email": user.email,
+                "name": user.username or "Customer"
+            }
+        ],
+        "from": {
+            "name": "Sri Kala Silks",
+            "email": "support@kalasilks.com"
+        },
+        "template_id": "welcome_kalasilks",
+        "variables": {
+            "name": user.username or "Customer"
+        }
+    }
+
+    r = requests.post(url, json=payload, headers=headers, timeout=20)
+    print("EMAIL STATUS:", r.status_code, r.text)
+    return r.text
+
+
+def send_order_email(user, order_id, amount):
+
+    html = f"""
+    <h2>Order Confirmed ✅</h2>
+
+    <p>Hello {user.username or "Customer"},</p>
+
+    <p>Your order <b>{order_id}</b> has been placed successfully.</p>
+
+    <p>Total Amount: ₹{amount}</p>
+
+    <p>Thank you for shopping with Sri Kala Silks.</p>
+    """
+
+    send_email_msg91(
+        user.email,
+        "Order Confirmed - Sri Kala Silks",
+        html
+    )
 db.init_app(app)
 
 
@@ -253,6 +349,10 @@ def login():
             user = User(mobile=mobile, role="user")
             db.session.add(user)
             db.session.commit()
+
+            # send welcome email
+            if user.email:
+                send_welcome_email(user)
 
         session["user_id"] = user.id
         session["role"] = user.role
@@ -355,6 +455,12 @@ def verify_otp():
         if not user:
             return redirect(url_for("set_username"))
 
+
+        if not user.username or not user.email:
+
+
+            return redirect(url_for("set_username"))
+
         session["username"] = user.username
         session["user_id"] = user.id
         session["role"] = user.role
@@ -396,6 +502,7 @@ def resend_otp():
     print("RESEND OTP:", otp)
 
     return redirect(url_for("verify_otp"))
+
 @app.route("/set-username", methods=["GET", "POST"])
 def set_username():
     mobile = session.get("login_mobile")
@@ -403,15 +510,59 @@ def set_username():
         return redirect("/")
 
     if request.method == "POST":
-        username = request.form["username"].strip()
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip().lower()
+
         if not username:
             return render_template("set_username.html", error="Username required")
-        user = User(mobile=mobile, username=username)
-        db.session.add(user)
-        db.session.commit()
-        session["username"] = username
+
+        if not email:
+            return render_template("set_username.html", error="Email required")
+
+        # email already used by another user check
+        existing_email_user = User.query.filter_by(email=email).first()
+        existing_mobile_user = User.query.filter_by(mobile=mobile).first()
+
+        if existing_email_user and (not existing_mobile_user or existing_email_user.id != existing_mobile_user.id):
+            return render_template("set_username.html", error="Email already exists")
+
+        # ✅ mobile already unte update cheyyi
+        if existing_mobile_user:
+            existing_mobile_user.username = username
+            existing_mobile_user.email = email
+
+            # role empty unte set cheyyi
+            if not existing_mobile_user.role:
+                existing_mobile_user.role = "customer"
+
+            db.session.commit()
+            user = existing_mobile_user
+
+        # ✅ mobile lekapothe new user create cheyyi
+        else:
+            user = User(
+                mobile=mobile,
+                username=username,
+                email=email,
+                role="customer"
+            )
+            db.session.add(user)
+            db.session.commit()
+
+        session["username"] = user.username
         session["user_id"] = user.id
+        session["role"] = user.role
+
         session.pop("login_mobile", None)
+        print("DEBUG USER EMAIL:", user.email)
+        print("DEBUG WELCOME MAIL TRY START") 
+        # ✅ welcome email
+        try:
+            if user.email:
+                send_welcome_email(user)
+        except Exception as e:
+            print("Welcome email failed:", e)
+
         return redirect(url_for("home"))
 
     return render_template("set_username.html")
@@ -1111,6 +1262,7 @@ from sqlalchemy.orm import joinedload
 
 @app.route("/payment-success")
 def payment_success():
+
     if "user_id" not in session:
         return redirect("/login")
 
@@ -1145,9 +1297,9 @@ def payment_success():
         else:
             qty = item
 
-        # ==================================================
-        # 🔥 STOCK CHECK + REDUCE
-        # ==================================================
+        # ==================================
+        # STOCK CHECK + REDUCE
+        # ==================================
         if size:
             size_obj = ProductSize.query.filter_by(
                 product_id=product_id,
@@ -1160,12 +1312,12 @@ def payment_success():
 
             size_obj.stock -= qty
 
-        # ==================================================
-        # 🔥 CREATE ORDER RECORDS
-        # ==================================================
+        # ==================================
+        # CREATE ORDER
+        # ==================================
         for _ in range(qty):
             order = Order(
-                order_id="SKS" + str(int(time.time() * 1000)),  # ✅ SKS prefix
+                order_id="SKS" + str(int(time.time() * 1000)),
                 user_id=session["user_id"],
                 product_id=product_id,
                 address_id=address_id,
@@ -1173,14 +1325,14 @@ def payment_success():
                 status="PLACED",
                 size=size
             )
+
             db.session.add(order)
             db.session.flush()
             created_ids.append(order.id)
 
-    # ---- SAVE STOCK + ORDERS ----
     db.session.commit()
 
-    # ---- FETCH CREATED ORDERS ----
+    # ---- FETCH ORDERS ----
     orders = Order.query.options(
         joinedload(Order.product),
         joinedload(Order.address)
@@ -1188,9 +1340,9 @@ def payment_success():
 
     final_amount = session.get("total_after_coupon", 0)
 
-    # ==================================================
-    # ✅ SEND WHATSAPP ORDER CONFIRMATION (UTILITY)
-    # ==================================================
+    # ==================================
+    # SEND WHATSAPP + EMAIL
+    # ==================================
     try:
         user = User.query.get(session["user_id"])
         address = Address.query.get(address_id)
@@ -1198,16 +1350,13 @@ def payment_success():
         customer_name = (user.username or "Customer") if user else "Customer"
         customer_mobile = (user.mobile or "") if user else ""
 
-        # ✅ city
         city = (address.city or "").strip() if address else ""
 
-        # ✅ delivery days (simple default)
-        # later: address.state / pincode batti advanced ga cheddam
         delivery_days = "2-3"
 
-        # ✅ one order id for confirmation
         order_no = orders[0].order_id if orders else "SKSORDER"
 
+        # -------- WHATSAPP --------
         if customer_mobile:
             send_whatsapp_order_confirmation(
                 customer_mobile,
@@ -1217,10 +1366,15 @@ def payment_success():
                 delivery_days,
                 city or "Your City"
             )
-    except Exception as e:
-        print("Order WhatsApp send failed:", e)
 
-    # ---- CLEAR SESSION CART ----
+        # -------- EMAIL --------
+        if user and user.email:
+            send_order_email(user, order_no, final_amount)
+
+    except Exception as e:
+        print("Order WhatsApp/Email send failed:", e)
+
+    # ---- CLEAR CART ----
     session.pop("cart", None)
     session.pop("total_after_coupon", None)
 
@@ -1229,7 +1383,6 @@ def payment_success():
         orders=orders,
         final_amount=final_amount
     )
-
 @app.route("/shop")
 def shop():
 
