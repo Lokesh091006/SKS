@@ -261,10 +261,7 @@ def send_order_email(user, order_id, amount, address_html, items_html, orders_li
             "name": "Sri Kala Silks",
             "email": "support@kalasilks.com"
         },
-
-        # ⚠️ ikkada actual template id pettu
         "template_id": "kalasilks_order_confirmation",
-
         "variables": {
             "name": user.username or "Customer",
             "order_id": order_id,
@@ -662,21 +659,25 @@ def order_detail(id):
     return render_template("order_detail.html", order=order)
 
 
-
 @app.route("/my-orders")
 def my_orders():
     if "user_id" not in session:
         return redirect("/login")
 
-    orders = Order.query.filter_by(
-        user_id=session["user_id"]
-    ).order_by(Order.created_at.desc()).all()
+    from sqlalchemy.orm import joinedload
 
-    print("ORDERS:", orders)   
+    orders = Order.query.options(
+        joinedload(Order.product),
+        joinedload(Order.address)
+    ).filter_by(
+        user_id=session["user_id"]
+    ).order_by(
+        Order.id.desc()
+    ).all()
+
+    print("ORDERS:", orders)
 
     return render_template("my_orders.html", orders=orders)
-
-
 
 
 @app.route("/category/<name>")
@@ -1355,7 +1356,7 @@ def payment_success():
 
     db.session.commit()
 
-    # ---- FETCH ORDERS ----
+    # ---- FETCH CREATED ORDERS ----
     orders = Order.query.options(
         joinedload(Order.product),
         joinedload(Order.address)
@@ -1381,18 +1382,15 @@ def payment_success():
         address_html = ""
 
         if address:
-
-
-
             address_html = f"""
-         <div>
-             <b>{address.name}</b><br>
-             {address.mobile}<br>
-             {address.house}<br>
-             {address.street}<br>
-             {address.city}, {address.state} - {address.pincode}
-        </div>
-        """
+            <div>
+                <b>{address.name or customer_name}</b><br>
+                {address.mobile or customer_mobile}<br>
+                {address.house or ""}<br>
+                {address.street or ""}<br>
+                {address.city or ""}, {address.state or ""} - {address.pincode or ""}
+            </div>
+            """
 
         # -------- ITEMS HTML --------
         items_html = ""
@@ -1404,9 +1402,17 @@ def payment_success():
             product_image_url = "https://www.kalasilks.com/static/images/placeholder.png"
 
             if o.product and o.product.image:
+                img = o.product.image.strip()
 
+                if img.startswith("http://") or img.startswith("https://"):
+                    product_image_url = img
+                elif img.startswith("static/"):
+                    product_image_url = f"https://www.kalasilks.com/{img}"
+                else:
+                    product_image_url = f"https://www.kalasilks.com/static/{img}"
 
-                product_image_url = f"https://www.kalasilks.com/static/{o.product.image}"
+            print("DEBUG PRODUCT IMAGE:", o.product.image if o.product else "NO PRODUCT")
+            print("DEBUG PRODUCT IMAGE URL:", product_image_url)
 
             items_html += f"""
             <table style="width:100%; margin-bottom:18px; border-collapse:collapse;">
@@ -1427,6 +1433,7 @@ def payment_success():
 
         # -------- ORDERS LINK --------
         orders_link = "https://www.kalasilks.com/my-orders"
+        print("DEBUG ORDERS LINK:", orders_link)
 
         # -------- WHATSAPP --------
         if customer_mobile:
