@@ -237,7 +237,7 @@ def send_welcome_email(user):
 
 
 
-def send_order_email(user, order_id, amount):
+def send_order_email(user, order_id, amount, address_html, items_html, orders_link):
     import os
     import requests
 
@@ -261,11 +261,17 @@ def send_order_email(user, order_id, amount):
             "name": "Sri Kala Silks",
             "email": "support@kalasilks.com"
         },
-        "template_id": "confirmation_order",
+
+        # ⚠️ ikkada actual template id pettu
+        "template_id": "kalasilks_order_confirmation",
+
         "variables": {
             "name": user.username or "Customer",
             "order_id": order_id,
-            "amount": amount
+            "amount": str(amount),
+            "address_html": address_html,
+            "items_html": items_html,
+            "orders_link": orders_link
         }
     }
 
@@ -1368,10 +1374,59 @@ def payment_success():
         customer_mobile = (user.mobile or "") if user else ""
 
         city = (address.city or "").strip() if address else ""
-
         delivery_days = "2-3"
-
         order_no = orders[0].order_id if orders else "SKSORDER"
+
+        # -------- ADDRESS HTML --------
+        address_html = ""
+
+        if address:
+
+
+
+            address_html = f"""
+         <div>
+             <b>{address.name}</b><br>
+             {address.mobile}<br>
+             {address.house}<br>
+             {address.street}<br>
+             {address.city}, {address.state} - {address.pincode}
+        </div>
+        """
+
+        # -------- ITEMS HTML --------
+        items_html = ""
+
+        for o in orders:
+            product_name = o.product.name if o.product else "Product"
+            product_price = getattr(o.product, "price", 0) if o.product else 0
+
+            product_image_url = "https://www.kalasilks.com/static/images/placeholder.png"
+
+            if o.product and o.product.image:
+
+
+                product_image_url = f"https://www.kalasilks.com/static/{o.product.image}"
+
+            items_html += f"""
+            <table style="width:100%; margin-bottom:18px; border-collapse:collapse;">
+                <tr>
+                    <td style="width:90px; vertical-align:top;">
+                        <img src="{product_image_url}" alt="{product_name}" style="width:72px; height:72px; object-fit:cover; border-radius:8px; border:1px solid #333;">
+                    </td>
+                    <td style="vertical-align:top; color:#ffffff; font-size:15px; line-height:1.5;">
+                        <div style="font-weight:bold;">{product_name}</div>
+                        <div style="color:#cccccc;">Size: {o.size or '-'}</div>
+                    </td>
+                    <td style="text-align:right; vertical-align:top; color:#ffffff; font-weight:bold; font-size:15px;">
+                        ₹{product_price}
+                    </td>
+                </tr>
+            </table>
+            """
+
+        # -------- ORDERS LINK --------
+        orders_link = "https://www.kalasilks.com/my-orders"
 
         # -------- WHATSAPP --------
         if customer_mobile:
@@ -1386,7 +1441,14 @@ def payment_success():
 
         # -------- EMAIL --------
         if user and user.email:
-            send_order_email(user, order_no, final_amount)
+            send_order_email(
+                user,
+                order_no,
+                final_amount,
+                address_html,
+                items_html,
+                orders_link
+            )
 
     except Exception as e:
         print("Order WhatsApp/Email send failed:", e)
