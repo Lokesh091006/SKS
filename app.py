@@ -1284,6 +1284,8 @@ def upi_processing():
 
 from sqlalchemy.orm import joinedload
 
+from urllib.parse import quote
+
 @app.route("/payment-success")
 def payment_success():
 
@@ -1364,15 +1366,12 @@ def payment_success():
 
     final_amount = session.get("total_after_coupon", 0)
 
-    # ==================================
-    # SEND WHATSAPP + EMAIL
-    # ==================================
     try:
         user = User.query.get(session["user_id"])
         address = Address.query.get(address_id)
 
-        customer_name = (user.username or "Customer") if user else "Customer"
-        customer_mobile = (user.mobile or "") if user else ""
+        customer_name = user.username or "Customer"
+        customer_mobile = user.mobile or ""
 
         city = (address.city or "").strip() if address else ""
         delivery_days = "2-3"
@@ -1396,6 +1395,7 @@ def payment_success():
         items_html = ""
 
         for o in orders:
+
             product_name = o.product.name if o.product else "Product"
             product_price = getattr(o.product, "price", 0) if o.product else 0
 
@@ -1403,13 +1403,22 @@ def payment_success():
 
             if o.product and o.product.image:
                 img = o.product.image.strip()
+                encoded_img = quote(img)
 
                 if img.startswith("http://") or img.startswith("https://"):
                     product_image_url = img
+
                 elif img.startswith("static/"):
-                    product_image_url = f"https://www.kalasilks.com/{img}"
+                    product_image_url = f"https://www.kalasilks.com/{encoded_img}"
+
+                elif img.startswith("images/"):
+                    product_image_url = f"https://www.kalasilks.com/static/{encoded_img}"
+
+                elif img.startswith("uploads/"):
+                    product_image_url = f"https://www.kalasilks.com/static/{encoded_img}"
+
                 else:
-                    product_image_url = f"https://www.kalasilks.com/static/{img}"
+                    product_image_url = f"https://www.kalasilks.com/static/images/{encoded_img}"
 
             print("DEBUG PRODUCT IMAGE:", o.product.image if o.product else "NO PRODUCT")
             print("DEBUG PRODUCT IMAGE URL:", product_image_url)
@@ -1418,13 +1427,15 @@ def payment_success():
             <table style="width:100%; margin-bottom:18px; border-collapse:collapse;">
                 <tr>
                     <td style="width:90px; vertical-align:top;">
-                        <img src="{product_image_url}" alt="{product_name}" style="width:72px; height:72px; object-fit:cover; border-radius:8px; border:1px solid #333;">
+                        <img src="{product_image_url}" alt="{product_name}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #333;">
                     </td>
-                    <td style="vertical-align:top; color:#ffffff; font-size:15px; line-height:1.5;">
+
+                    <td style="vertical-align:top;color:#ffffff;font-size:15px;line-height:1.5;">
                         <div style="font-weight:bold;">{product_name}</div>
                         <div style="color:#cccccc;">Size: {o.size or '-'}</div>
                     </td>
-                    <td style="text-align:right; vertical-align:top; color:#ffffff; font-weight:bold; font-size:15px;">
+
+                    <td style="text-align:right;vertical-align:top;color:#ffffff;font-weight:bold;font-size:15px;">
                         ₹{product_price}
                     </td>
                 </tr>
