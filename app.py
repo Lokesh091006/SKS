@@ -20,10 +20,11 @@ from sqlalchemy.orm import joinedload
 
 
 app = Flask(__name__)
+
 cloudinary.config(
-    cloud_name=os.getenv("dkiadny43"),
-    api_key=os.getenv("747269987455528"),
-    api_secret=os.getenv("AYhd2I9ew4LcsuG0whdX8kANT-k")
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
 
