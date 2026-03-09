@@ -21,13 +21,17 @@
 <tr class="cart-row">
 
     <td class="product-info">
-        <img src="{{ url_for('static', filename=item.product.image) }}" class="cart-img">
+    {% if item.product.image and item.product.image.startswith('http') %}
+        <img src="{{ item.product.image }}" class="cart-img">
+    {% else %}
+        <img src="{{ item.product.image|imgsrc }}" class="cart-img">
+    {% endif %}
 
-        <div>
-            <h4>{{ item.product.name }}</h4>
-            <p class="size-text">Size: {{ item.size }}</p>
-        </div>
-    </td>
+    <div>
+        <h4>{{ item.product.name }}</h4>
+        <p class="size-text">Size: {{ item.size }}</p>
+    </div>
+</td>
 
     <td>₹{{ item.product.price }}</td>
 

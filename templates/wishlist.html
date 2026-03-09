@@ -105,24 +105,27 @@
     <div class="products">
 
         {% for product in products %}
-        <div class="card">
-            <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}">
-            <h3>{{ product.name }}</h3>
-            <p>₹{{ product.price }}</p>
+<div class="card">
+    {% if product.image and product.image.startswith('http') %}
+        <img src="{{ product.image }}" alt="{{ product.name }}">
+    {% else %}
+       <img src="{{ item.product.image|imgsrc }}" alt="{{ product.name }}">
+    {% endif %}
 
-            <div style="display:flex; justify-content:center; flex-wrap: wrap;">
-                
+    <h3>{{ product.name }}</h3>
+    <p>₹{{ product.price }}</p>
 
-                <a href="{{ url_for('remove_from_wishlist', product_id=product.id) }}" class="card-btn remove">
-                   Remove
-                </a>
+    <div style="display:flex; justify-content:center; flex-wrap: wrap;">
+        <a href="{{ url_for('remove_from_wishlist', product_id=product.id) }}" class="card-btn remove">
+           Remove
+        </a>
 
-                <a href="/product/{{ product.id }}" class="btn-buy">
-                   View
-                </a>
-            </div>
-        </div>
-        {% endfor %}
+        <a href="/product/{{ product.id }}" class="btn-buy">
+           View
+        </a>
+    </div>
+</div>
+{% endfor %}
 
     </div>
 

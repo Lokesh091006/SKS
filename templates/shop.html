@@ -264,7 +264,7 @@ body{
    
     </div>
 
-    <<p><a href="{{ url_for('category', name='women', type='kurti') }}">Kurties</a></p>
+    <p><a href="{{ url_for('category', name='women', type='kurti') }}">Kurties</a></p>
 
 <p><a href="{{ url_for('category', name='women', type='legging') }}">Leggings</a></p>
 
@@ -341,7 +341,11 @@ body{
 <div class="card" data-price="{{ p.price }}">
 
     <a href="{{ url_for('product_page', pid=p.id) }}">
-        <img src="{{ url_for('static', filename=p.image) }}" class="product-img">
+        {% if p.image and p.image.startswith('http') %}
+            <img src="{{ p.image }}" class="product-img">
+        {% else %}
+           <img src="{{ p.image|imgsrc }}" class="product-img">
+        {% endif %}
     </a>
 
     <h4>{{ p.name }}</h4>
@@ -406,7 +410,7 @@ function toggleSection(id){
 function sortProducts(){
     let select = document.getElementById("sortSelect").value;
     let productsContainer = document.querySelector(".products");
-    let products = Array.from(document.querySelectorAll(".product-card"));
+    let products = Array.from(document.querySelectorAll(".card"));
 
     products.sort(function(a, b){
         let priceA = parseFloat(a.getAttribute("data-price"));

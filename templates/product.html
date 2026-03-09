@@ -27,14 +27,30 @@
     <button class="prev" id="prevBtn">❮</button>
 
     <div class="slides" id="slides">
-        <img src="{{ url_for('static', filename=product.image) }}">
-        {% if product.image2 %}
-        <img src="{{ url_for('static', filename=product.image2) }}">
+    {% if product.image %}
+        {% if product.image.startswith('http') %}
+            <img src="{{ product.image }}">
+        {% else %}
+            <img src="{{ product.image|imgsrc }}">
         {% endif %}
-        {% if product.image3 %}
-        <img src="{{ url_for('static', filename=product.image3) }}">
+    {% endif %}
+
+    {% if product.image2 %}
+        {% if product.image2.startswith('http') %}
+            <img src="{{ product.image2 }}">
+        {% else %}
+            <img src="{{ product.image|imgsrc }}">
         {% endif %}
-    </div>
+    {% endif %}
+
+    {% if product.image3 %}
+        {% if product.image3.startswith('http') %}
+            <img src="{{ product.image3 }}">
+        {% else %}
+            <img src="{{ product.image|imgsrc }}">
+        {% endif %}
+    {% endif %}
+</div>
 
     <!-- RIGHT ARROW -->
     <button class="next" id="nextBtn">❯</button>

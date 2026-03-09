@@ -15,17 +15,22 @@
 
         <div class="card border-0 shadow-sm h-100">
 
-            {% if order.product and order.product.image %}
-            <img src="{{ url_for('static', filename=order.product.image) }}"
-                 class="card-img-top"
-                 style="height:200px; object-fit:cover;">
-            {% else %}
-            <div class="bg-light d-flex align-items-center justify-content-center"
-                 style="height:200px">
-                 No Image
-            </div>
-            {% endif %}
-
+           {% if order.product and order.product.image %}
+    {% if order.product.image.startswith('http') %}
+        <img src="{{ order.product.image }}"
+             class="card-img-top"
+             style="height:200px; object-fit:cover;">
+    {% else %}
+        <img src="{{ url_for('static', filename=order.product.image) }}"
+             class="card-img-top"
+             style="height:200px; object-fit:cover;">
+    {% endif %}
+{% else %}
+<div class="bg-light d-flex align-items-center justify-content-center"
+     style="height:200px">
+     No Image
+</div>
+{% endif %}
             <div class="card-body">
 
                 <div class="fw-semibold text-dark">

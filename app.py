@@ -289,6 +289,13 @@ def send_order_email(user, order_id, amount, address_html, items_html, orders_li
     return r.text
 db.init_app(app)
 
+@app.template_filter("imgsrc")
+def imgsrc(path):
+    if not path:
+        return url_for("static", filename="images/placeholder.png")
+    if str(path).startswith("http"):
+        return path
+    return url_for("static", filename=path)
 
 FAST2SMS_API_KEY = "U41D0zVLyOfXbVbR1yI95pqxKvcqrgNIo38ZNJ7e01O7wVn6tjAm8p4nSnNa"
 
