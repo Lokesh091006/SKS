@@ -1109,77 +1109,81 @@ def admin_dashboard():
 @app.route("/admin/add-product", methods=["GET", "POST"])
 @role_required("admin")
 def add_product():
-    if request.method == "POST":
+    try:
+        if request.method == "POST":
 
-        # ===== FORM DATA =====
-        name = request.form["name"]
-        price = request.form["price"]
-        category = request.form["category"]
-        sizes = request.form.get("sizes")      # S,M,L
-        stocks = request.form.get("stocks")    # 5,0,3
-        type_ = request.form.get("type")
-        brand = request.form.get("brand")
+            # ===== FORM DATA =====
+            name = request.form["name"]
+            price = request.form["price"]
+            category = request.form["category"]
+            sizes = request.form.get("sizes")
+            stocks = request.form.get("stocks")
+            type_ = request.form.get("type")
+            brand = request.form.get("brand")
 
-        img1 = request.files["image1"]
-        img2 = request.files.get("image2")
-        img3 = request.files.get("image3")
+            img1 = request.files["image1"]
+            img2 = request.files.get("image2")
+            img3 = request.files.get("image3")
 
-        # ===== IMAGE 1 (Required) =====
-        img1_path = None
-        if img1 and img1.filename != "":
-            upload_result1 = cloudinary.uploader.upload(img1, folder="kalasilks/products")
-            img1_path = upload_result1["secure_url"]
+            # ===== IMAGE 1 (Required) =====
+            img1_path = None
+            if img1 and img1.filename != "":
+                upload_result1 = cloudinary.uploader.upload(img1, folder="kalasilks/products")
+                img1_path = upload_result1["secure_url"]
 
-        # ===== IMAGE 2 (Optional) =====
-        img2_path = None
-        if img2 and img2.filename != "":
-            upload_result2 = cloudinary.uploader.upload(img2, folder="kalasilks/products")
-            img2_path = upload_result2["secure_url"]
+            # ===== IMAGE 2 (Optional) =====
+            img2_path = None
+            if img2 and img2.filename != "":
+                upload_result2 = cloudinary.uploader.upload(img2, folder="kalasilks/products")
+                img2_path = upload_result2["secure_url"]
 
-        # ===== IMAGE 3 (Optional) =====
-        img3_path = None
-        if img3 and img3.filename != "":
-            upload_result3 = cloudinary.uploader.upload(img3, folder="kalasilks/products")
-            img3_path = upload_result3["secure_url"]
+            # ===== IMAGE 3 (Optional) =====
+            img3_path = None
+            if img3 and img3.filename != "":
+                upload_result3 = cloudinary.uploader.upload(img3, folder="kalasilks/products")
+                img3_path = upload_result3["secure_url"]
 
-        # ===== SAVE PRODUCT =====
-        new_product = Product(
-            name=name,
-            price=price,
-            category=category,
-            sizes=sizes,
-            type=type_,
-            brand=brand,
-            image=img1_path,
-            image2=img2_path,
-            image3=img3_path
-        )
+            # ===== SAVE PRODUCT =====
+            new_product = Product(
+                name=name,
+                price=price,
+                category=category,
+                sizes=sizes,
+                type=type_,
+                brand=brand,
+                image=img1_path,
+                image2=img2_path,
+                image3=img3_path
+            )
 
-        db.session.add(new_product)
-        db.session.commit()
-
-        # ===== SAVE SIZES WITH STOCK =====
-        if sizes and stocks:
-            size_list = sizes.split(",")
-            stock_list = stocks.split(",")
-
-            if len(size_list) != len(stock_list):
-                return "Sizes and Stocks count mismatch ❌"
-
-            for i in range(len(size_list)):
-                ps = ProductSize(
-                    product_id=new_product.id,
-                    size=size_list[i].strip(),
-                    stock=int(stock_list[i])
-                )
-                db.session.add(ps)
-
+            db.session.add(new_product)
             db.session.commit()
 
-        return redirect("/admin/dashboard")
+            # ===== SAVE SIZES WITH STOCK =====
+            if sizes and stocks:
+                size_list = sizes.split(",")
+                stock_list = stocks.split(",")
 
-    return render_template("admin/add_product.html")
+                if len(size_list) != len(stock_list):
+                    return "Sizes and Stocks count mismatch ❌"
 
+                for i in range(len(size_list)):
+                    ps = ProductSize(
+                        product_id=new_product.id,
+                        size=size_list[i].strip(),
+                        stock=int(stock_list[i])
+                    )
+                    db.session.add(ps)
+
+                db.session.commit()
+
+            return redirect("/admin/dashboard")
+
+        return render_template("admin/add_product.html")
+
+    except Exception as e:
+        print("ADD PRODUCT ERROR:", e)
+        return f"Add Product Error: {e}"
 
 
 @app.route("/admin/products")
