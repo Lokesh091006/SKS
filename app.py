@@ -24,11 +24,17 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'shop.db')}"
+database_url = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'shop.db')}")
+
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.secret_key = "sks_super_secret_key_123"
+app.secret_key = os.getenv("SECRET_KEY", "sks_super_secret_key_123")
 
 
 
@@ -298,21 +304,6 @@ with app.app_context():
         db.session.commit()
 
 
-def send_sms_otp(mobile, otp):
-    url = "https://www.fast2sms.com/dev/bulkV2"
-    payload = {
-        "route": "otp",
-        "variables_values": otp,
-        "numbers": mobile
-    }
-    headers = {
-        "authorization": FAST2SMS_API_KEY,
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-    response = requests.post(url, data=payload, headers=headers, timeout=5)
-
-    print("FAST2SMS RESPONSE:", response.text)
-    return response.json()
 
 
 
