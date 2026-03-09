@@ -1,5 +1,6 @@
 import random,re,time,requests,os
-
+import cloudinary
+import cloudinary.uploader
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
@@ -19,10 +20,14 @@ from sqlalchemy.orm import joinedload
 
 
 app = Flask(__name__)
+cloudinary.config(
+    cloud_name=os.getenv("dkiadny43"),
+    api_key=os.getenv("747269987455528"),
+    api_secret=os.getenv("AYhd2I9ew4LcsuG0whdX8kANT-k")
+)
 
 
-UPLOAD_FOLDER = "static/uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -1101,9 +1106,6 @@ def admin_dashboard():
         total_users=total_users
 )
 
-
-
-
 @app.route("/admin/add-product", methods=["GET", "POST"])
 @role_required("admin")
 def add_product():
@@ -1125,33 +1127,27 @@ def add_product():
         # ===== IMAGE 1 (Required) =====
         img1_path = None
         if img1 and img1.filename != "":
-            filename1 = img1.filename
-            path1 = os.path.join(app.config["UPLOAD_FOLDER"], filename1)
-            img1.save(path1)
-            img1_path = "uploads/" + filename1
+            upload_result1 = cloudinary.uploader.upload(img1, folder="kalasilks/products")
+            img1_path = upload_result1["secure_url"]
 
         # ===== IMAGE 2 (Optional) =====
         img2_path = None
         if img2 and img2.filename != "":
-            filename2 = img2.filename
-            path2 = os.path.join(app.config["UPLOAD_FOLDER"], filename2)
-            img2.save(path2)
-            img2_path = "uploads/" + filename2
+            upload_result2 = cloudinary.uploader.upload(img2, folder="kalasilks/products")
+            img2_path = upload_result2["secure_url"]
 
         # ===== IMAGE 3 (Optional) =====
         img3_path = None
         if img3 and img3.filename != "":
-            filename3 = img3.filename
-            path3 = os.path.join(app.config["UPLOAD_FOLDER"], filename3)
-            img3.save(path3)
-            img3_path = "uploads/" + filename3
+            upload_result3 = cloudinary.uploader.upload(img3, folder="kalasilks/products")
+            img3_path = upload_result3["secure_url"]
 
         # ===== SAVE PRODUCT =====
         new_product = Product(
             name=name,
             price=price,
             category=category,
-            sizes=sizes,   # optional (can remove later)
+            sizes=sizes,
             type=type_,
             brand=brand,
             image=img1_path,
@@ -1160,13 +1156,12 @@ def add_product():
         )
 
         db.session.add(new_product)
-        db.session.commit()   # ⚠️ Important (ID generate avvali)
+        db.session.commit()
 
         # ===== SAVE SIZES WITH STOCK =====
         if sizes and stocks:
-
-            size_list = sizes.split(",")      # ["S","M","L"]
-            stock_list = stocks.split(",")    # ["5","0","3"]
+            size_list = sizes.split(",")
+            stock_list = stocks.split(",")
 
             if len(size_list) != len(stock_list):
                 return "Sizes and Stocks count mismatch ❌"
@@ -1184,6 +1179,8 @@ def add_product():
         return redirect("/admin/dashboard")
 
     return render_template("admin/add_product.html")
+
+
 
 @app.route("/admin/products")
 @role_required("admin")
