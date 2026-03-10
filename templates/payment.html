@@ -1,40 +1,115 @@
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Payment Method | Mall SKS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .container{
+            max-width:600px;
+            margin:40px auto;
+            padding:20px;
+        }
+
+        .price-box{
+            background:#fff;
+            padding:20px;
+            border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom:20px;
+        }
+
+        .payment-option{
+            background:#fff;
+            padding:15px;
+            border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom:15px;
+            font-size:16px;
+        }
+
+        .payment-option input{
+            margin-right:10px;
+        }
+
+        button{
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:10px;
+            background:#ff2e63;
+            color:#fff;
+            font-size:16px;
+            cursor:pointer;
+        }
+
+        button:hover{
+            opacity:0.95;
+        }
+
+        .hint{
+            color:#666;
+            font-size:14px;
+            margin-top:6px;
+            margin-left:28px;
+        }
+    </style>
+</head>
+<body>
+
+{% include "header.html" %}
 
 <div class="container">
     <h2>Select Payment Method</h2>
 
     <div class="price-box">
-        <h3>Total after coupon: ₹<span id="after-coupon">{{ total_after_coupon }}</span></h3>
-        <h3>Final Payable Amount: ₹<span id="payable">{{ total_after_coupon }}</span></h3>
-
-        <p id="upi-discount-msg" style="color:green; display:none;">
-            When UPI is selected, only the remaining amount needs to be paid
+        <h3>Total Payable Amount: ₹<span id="payable">{{ total_after_coupon }}</span></h3>
+        <p style="color:green; margin-top:10px;">
+            Online payment supports UPI, PhonePe, GPay, Paytm, Cards and Netbanking
         </p>
     </div>
 
-    <form method="POST">
+    <form method="POST" action="{{ url_for('payment') }}">
 
         <div class="payment-option">
-            <input type="radio" name="method" value="phonepe" onclick="applyUpiDiscount()" required>
-            PhonePe (UPI)
+            <label>
+                <input type="radio" name="method" value="online" required onclick="showOnlineAmount()">
+                Pay Online
+            </label>
+            <div class="hint">
+                Pay securely using Razorpay (UPI / PhonePe / GPay / Paytm / Cards)
+            </div>
         </div>
 
         <div class="payment-option">
-            <input type="radio" name="method" value="paytm" onclick="applyUpiDiscount()">
-            Paytm (UPI)
-        </div>
-
-        <div class="payment-option">
-            <input type="radio" name="method" value="card" onclick="resetAmount()">
-            Debit / Credit Card
-        </div>
-
-        <div class="payment-option">
-            <input type="radio" name="method" value="cod" onclick="resetAmount()">
-            Cash on Delivery (+₹30)
+            <label>
+                <input type="radio" name="method" value="cod" onclick="showCodAmount()">
+                Cash on Delivery
+            </label>
+            <div class="hint">
+                Extra ₹30 will be added for COD
+            </div>
         </div>
 
         <button type="submit">Continue</button>
     </form>
 </div>
+
+<script>
+    const baseAmount = Number("{{ total_after_coupon }}");
+
+    function showOnlineAmount() {
+        document.getElementById("payable").innerText = baseAmount.toFixed(2);
+    }
+
+    function showCodAmount() {
+        document.getElementById("payable").innerText = (baseAmount + 30).toFixed(2);
+    }
+</script>
+
+{% include "footer.html" %}
+
+</body>
+</html>

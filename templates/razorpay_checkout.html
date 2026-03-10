@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pay Now | Mall SKS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+<h2 style="text-align:center; margin-top:40px;">Redirecting to secure payment...</h2>
+
+<form id="razorpay-form" action="{{ url_for('razorpay_verify') }}" method="POST" style="display:none;">
+    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+    <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+    <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+</form>
+
+<script>
+    var options = {
+        "key": "{{ razorpay_key }}",
+        "amount": "{{ amount }}",
+        "currency": "INR",
+        "name": "Sri Kala Silks",
+        "description": "Order Payment",
+        "order_id": "{{ order_id }}",
+        "handler": function (response){
+            document.getElementById("razorpay_payment_id").value = response.razorpay_payment_id;
+            document.getElementById("razorpay_order_id").value = response.razorpay_order_id;
+            document.getElementById("razorpay_signature").value = response.razorpay_signature;
+            document.getElementById("razorpay-form").submit();
+        },
+        "prefill": {
+            "name": "{{ user.username if user else '' }}",
+            "email": "{{ user.email if user else '' }}",
+            "contact": "{{ user.mobile if user else '' }}"
+        },
+        "theme": {
+            "color": "#e91e63"
+        },
+        "modal": {
+            "ondismiss": function(){
+                window.location.href = "{{ url_for('payment') }}";
+            }
+        }
+    };
+
+    var rzp = new Razorpay(options);
+    window.onload = function() {
+        rzp.open();
+    };
+</script>
+
+</body>
+</html>

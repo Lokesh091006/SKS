@@ -1,6 +1,7 @@
 import random,re,time,requests,os
 import cloudinary
 import cloudinary.uploader
+import razorpay
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
@@ -29,7 +30,9 @@ cloudinary.config(
 
 
 
-
+client = razorpay.Client(
+    auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET"))
+)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -1250,23 +1253,84 @@ def edit_product(id):
 def payment():
     total_after_coupon = session.get("total_after_coupon") or 0
 
+    if "user_id" not in session:
+        return redirect("/login")
+
     if request.method == "POST":
         method = request.form.get("method")
-        session["payment_method"] = method  
 
         if method == "cod":
+            session["payment_method"] = "cod"
             session["final_amount"] = total_after_coupon + 30
             return redirect(url_for("payment_success"))
 
-        elif method in ["phonepe", "paytm", "supermoney", "pop"]:
-            session["final_amount"] = round(total_after_coupon * 0.95, 2)
-            return redirect(url_for("upi_details"))
-
-        elif method == "card":
+        elif method == "online":
+            session["payment_method"] = "razorpay"
             session["final_amount"] = total_after_coupon
-            return redirect(url_for("payment_success"))
+            return redirect(url_for("razorpay_checkout"))
 
     return render_template("payment.html", total_after_coupon=total_after_coupon)
+
+
+
+@app.route("/razorpay-checkout")
+def razorpay_checkout():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    amount = session.get("final_amount")
+    address_id = session.get("address")
+
+    if not amount:
+        return redirect("/cart")
+
+    if not address_id:
+        return redirect("/address")
+
+    amount_paise = int(float(amount) * 100)
+
+    razorpay_order = client.order.create({
+        "amount": amount_paise,
+        "currency": "INR",
+        "payment_capture": 1
+    })
+
+    session["razorpay_order_id"] = razorpay_order["id"]
+
+    user = User.query.get(session["user_id"])
+
+    return render_template(
+        "razorpay_checkout.html",
+        razorpay_key=os.getenv("RAZORPAY_KEY_ID"),
+        amount=amount_paise,
+        order_id=razorpay_order["id"],
+        user=user
+    )
+
+@app.route("/razorpay-verify", methods=["POST"])
+def razorpay_verify():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    razorpay_payment_id = request.form.get("razorpay_payment_id")
+    razorpay_order_id = request.form.get("razorpay_order_id")
+    razorpay_signature = request.form.get("razorpay_signature")
+
+    try:
+        client.utility.verify_payment_signature({
+            "razorpay_payment_id": razorpay_payment_id,
+            "razorpay_order_id": razorpay_order_id,
+            "razorpay_signature": razorpay_signature
+        })
+
+        session["payment_method"] = "razorpay"
+        session["razorpay_payment_id"] = razorpay_payment_id
+
+        return redirect(url_for("payment_success"))
+
+    except Exception as e:
+        print("RAZORPAY VERIFY ERROR:", e)
+        return "Payment verification failed ❌", 400
 
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
