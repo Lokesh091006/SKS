@@ -1131,6 +1131,7 @@ def add_product():
             stocks = request.form.get("stocks")
             type_ = request.form.get("type")
             brand = request.form.get("brand")
+            description = request.form.get("description")
 
             img1 = request.files["image1"]
             img2 = request.files.get("image2")
@@ -1162,6 +1163,7 @@ def add_product():
                 sizes=sizes,
                 type=type_,
                 brand=brand,
+                description=description,
                 image=img1_path,
                 image2=img2_path,
                 image3=img3_path
@@ -1182,7 +1184,7 @@ def add_product():
                     ps = ProductSize(
                         product_id=new_product.id,
                         size=size_list[i].strip(),
-                        stock=int(stock_list[i])
+                        stock=int(stock_list[i].strip())
                     )
                     db.session.add(ps)
 

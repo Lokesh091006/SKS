@@ -10,7 +10,7 @@ class Product(db.Model):
     color = db.Column(db.String(30))
     brand = db.Column(db.String(50))
     sizes = db.Column(db.String(100))  
-
+    description = db.Column(db.Text)
     image = db.Column(db.String(200))
     image2 = db.Column(db.String(200))
     image3 = db.Column(db.String(200))

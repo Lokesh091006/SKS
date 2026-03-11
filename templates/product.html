@@ -23,40 +23,39 @@
     <div class="product-image">
         <div class="slider">
 
-    <!-- LEFT ARROW -->
-    <button class="prev" id="prevBtn">❮</button>
+            <!-- LEFT ARROW -->
+            <button class="prev" id="prevBtn">❮</button>
 
-    <div class="slides" id="slides">
-    {% if product.image %}
-        {% if product.image.startswith('http') %}
-            <img src="{{ product.image }}">
-        {% else %}
-            <img src="{{ product.image|imgsrc }}">
-        {% endif %}
-    {% endif %}
+            <div class="slides" id="slides">
+                {% if product.image %}
+                    {% if product.image.startswith('http') %}
+                        <img src="{{ product.image }}">
+                    {% else %}
+                        <img src="{{ product.image|imgsrc }}">
+                    {% endif %}
+                {% endif %}
 
-    {% if product.image2 %}
-        {% if product.image2.startswith('http') %}
-            <img src="{{ product.image2 }}">
-        {% else %}
-            <img src="{{ product.image|imgsrc }}">
-        {% endif %}
-    {% endif %}
+                {% if product.image2 %}
+                    {% if product.image2.startswith('http') %}
+                        <img src="{{ product.image2 }}">
+                    {% else %}
+                        <img src="{{ product.image2|imgsrc }}">
+                    {% endif %}
+                {% endif %}
 
-    {% if product.image3 %}
-        {% if product.image3.startswith('http') %}
-            <img src="{{ product.image3 }}">
-        {% else %}
-            <img src="{{ product.image|imgsrc }}">
-        {% endif %}
-    {% endif %}
-</div>
+                {% if product.image3 %}
+                    {% if product.image3.startswith('http') %}
+                        <img src="{{ product.image3 }}">
+                    {% else %}
+                        <img src="{{ product.image3|imgsrc }}">
+                    {% endif %}
+                {% endif %}
+            </div>
 
-    <!-- RIGHT ARROW -->
-    <button class="next" id="nextBtn">❯</button>
+            <!-- RIGHT ARROW -->
+            <button class="next" id="nextBtn">❯</button>
 
-</div>
-
+        </div>
     </div>
 
     <!-- RIGHT : DETAILS -->
@@ -64,33 +63,37 @@
 
         <h1 class="product-title">{{ product.name }}</h1>
         <p class="product-price">₹ {{ product.price }}</p>
+
         {% set all_out = sizes|selectattr("stock", "equalto", 0)|list|length == sizes|length %}
 
-{% if all_out %}
-<p style="color:red; font-weight:bold;">Sold Out 🔥</p>
-{% endif %}
-        <p class="product-desc">
-            Premium quality {{ product.name }} with modern fit.  
-            Perfect for daily wear and special occasions.
-        </p>
+        {% if all_out %}
+            <p style="color:red; font-weight:bold;">Sold Out 🔥</p>
+        {% endif %}
+
+        <!-- PRODUCT DESCRIPTION -->
+        {% if product.description %}
+            <p class="product-desc">{{ product.description }}</p>
+        {% else %}
+            <p class="product-desc">
+                Premium quality {{ product.name }} with modern fit.
+                Perfect for daily wear and special occasions.
+            </p>
+        {% endif %}
 
         <!-- SIZE SELECTION -->
         <div class="size-box">
             <label>Select Size:</label>
-          <div class="sizes">
-    {% for s in sizes %}
-        
-        {% if s.stock > 0 %}
-            <span class="size">{{ s.size }}</span>
-        
-        {% else %}
-            <span class="size sold">
-                {{ s.size }} ❌
-            </span>
-        {% endif %}
-    
-    {% endfor %}
-</div>
+            <div class="sizes">
+                {% for s in sizes %}
+                    {% if s.stock > 0 %}
+                        <span class="size">{{ s.size }}</span>
+                    {% else %}
+                        <span class="size sold">
+                            {{ s.size }} ❌
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            </div>
             <input type="hidden" name="size" id="selectedSize">
         </div>
 
@@ -104,43 +107,31 @@
             </select>
         </div>
 
-        <!-- DELIVERY -->
-        
-
         <!-- ACTION BUTTONS -->
         <div class="product-buttons">
 
             <!-- WISHLIST -->
-            <!-- WISHLIST -->
-<div class="wishlist-wrap">
-    <i id="wishlistIcon" class="fa-regular fa-heart"></i>
-</div>
+            <div class="wishlist-wrap">
+                <i id="wishlistIcon" class="fa-regular fa-heart"></i>
+            </div>
 
-<!-- CART -->
+            <!-- CART -->
+            <a href="#" id="addToCartBtn" class="btn-cart"
+               {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
+                🛒
+            </a>
 
-
-<a href="#" id="addToCartBtn" class="btn-cart"
-   {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
-    🛒 
-</a>
-
-<a href="#" id="buyNowBtn" class="btn-buy"
-   {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
-     Buy Now
-</a>
-
-
-
+            <a href="#" id="buyNowBtn" class="btn-buy"
+               {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
+                Buy Now
+            </a>
 
         </div>
 
         <!-- FEATURES -->
         <ul class="features">
             <li>✔ 100% Original Products</li>
-            
             <li>✔ Cash on Delivery Available</li>
-
-            
         </ul>
 
     </div>
@@ -172,19 +163,20 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-
     // ===== SIZE SELECT =====
     const sizes = document.querySelectorAll(".size");
     const hiddenInput = document.getElementById("selectedSize");
 
     sizes.forEach(size => {
         size.addEventListener("click", () => {
+            if (size.classList.contains("sold")) {
+                return;
+            }
             sizes.forEach(s => s.classList.remove("active"));
             size.classList.add("active");
-            hiddenInput.value = size.innerText;
+            hiddenInput.value = size.innerText.replace(" ❌", "").trim();
         });
     });
-
 
     // ===== BUTTONS =====
     const addToCartBtn = document.getElementById("addToCartBtn");
@@ -208,11 +200,9 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "{{ url_for('address', product_id=product.id) }}" + "?size=" + encodeURIComponent(hiddenInput.value);
     });
 
-
     // ===== ❤️ WISHLIST =====
     const wishlistIcon = document.getElementById("wishlistIcon");
 
-    // page load appudu already wishlist lo unte red
     const wishlist = {{ session.get("wishlist", [])|tojson }};
     if (wishlist.includes({{ product.id }})) {
         wishlistIcon.classList.add("fa-solid");
@@ -248,17 +238,14 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 document.addEventListener("DOMContentLoaded", function(){
-
-    document.querySelectorAll(".size").forEach(el=>{
-        if(el.classList.contains("sold")){
+    document.querySelectorAll(".size").forEach(el => {
+        if (el.classList.contains("sold")) {
             el.onclick = function(){
                 alert("This size is sold out ❌");
             }
         }
     });
-
 });
-
 </script>
 
 </body>
