@@ -15,22 +15,23 @@
 
         <div class="card border-0 shadow-sm h-100">
 
-           {% if order.product and order.product.image %}
-    {% if order.product.image.startswith('http') %}
-        <img src="{{ order.product.image }}"
-             class="card-img-top"
-             style="height:200px; object-fit:cover;">
-    {% else %}
-        <img src="{{ url_for('static', filename=order.product.image) }}"
-             class="card-img-top"
-             style="height:200px; object-fit:cover;">
-    {% endif %}
-{% else %}
-<div class="bg-light d-flex align-items-center justify-content-center"
-     style="height:200px">
-     No Image
-</div>
-{% endif %}
+            {% if order.product and order.product.image %}
+                {% if order.product.image.startswith('http') %}
+                    <img src="{{ order.product.image }}"
+                         class="card-img-top"
+                         style="height:200px; object-fit:cover;">
+                {% else %}
+                    <img src="{{ url_for('static', filename=order.product.image) }}"
+                         class="card-img-top"
+                         style="height:200px; object-fit:cover;">
+                {% endif %}
+            {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center"
+                     style="height:200px">
+                     No Image
+                </div>
+            {% endif %}
+
             <div class="card-body">
 
                 <div class="fw-semibold text-dark">
@@ -44,6 +45,51 @@
                 <div class="pink fw-bold mt-1">
                     ₹{{ order.product.price if order.product else "-" }}
                 </div>
+
+                {% if order.size %}
+                <div class="small text-muted mt-1">
+                    Size: {{ order.size }}
+                </div>
+                {% endif %}
+
+                <div class="small mt-2">
+                    <span class="fw-semibold text-dark">Order Status:</span>
+                    <span class="text-success">{{ order.status or "PLACED" }}</span>
+                </div>
+
+                <div class="small">
+                    <span class="fw-semibold text-dark">Payment:</span>
+                    <span class="text-muted">{{ order.payment_method or "-" }}</span>
+                </div>
+
+                {% if order.shiprocket_status %}
+                <div class="small">
+                    <span class="fw-semibold text-dark">Shipping:</span>
+                    <span class="text-primary">{{ order.shiprocket_status }}</span>
+                </div>
+                {% endif %}
+
+                {% if order.awb_code %}
+                <div class="small">
+                    <span class="fw-semibold text-dark">AWB:</span>
+                    <span class="text-muted">{{ order.awb_code }}</span>
+                </div>
+                {% endif %}
+
+                {% if order.courier_name %}
+                <div class="small">
+                    <span class="fw-semibold text-dark">Courier:</span>
+                    <span class="text-muted">{{ order.courier_name }}</span>
+                </div>
+                {% endif %}
+
+                {% if order.tracking_url %}
+                <div class="mt-3">
+                    <a href="{{ order.tracking_url }}" target="_blank" class="btn btn-sm btn-dark w-100">
+                        Track Order
+                    </a>
+                </div>
+                {% endif %}
 
             </div>
         </div>

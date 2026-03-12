@@ -16,7 +16,8 @@ from functools import wraps
 from flask import flash 
 from sqlalchemy.orm import joinedload
 
-
+from dotenv import load_dotenv
+load_dotenv()
    
 
 
@@ -290,6 +291,101 @@ def send_order_email(user, order_id, amount, address_html, items_html, orders_li
     r = requests.post(url, json=payload, headers=headers, timeout=20)
     print("ORDER EMAIL STATUS:", r.status_code, r.text)
     return r.text
+
+
+
+print("DATABASE_URL USED:", app.config["SQLALCHEMY_DATABASE_URI"])
+
+
+def get_shiprocket_token():
+    url = "https://apiv2.shiprocket.in/v1/external/auth/login"
+    payload = {
+        "email": os.getenv("SHIPROCKET_EMAIL"),
+        "password": os.getenv("SHIPROCKET_PASSWORD")
+    }
+
+    r = requests.post(url, json=payload, timeout=20)
+    print("SHIPROCKET AUTH:", r.status_code, r.text)
+
+    if r.status_code not in (200, 201):
+        return None
+
+    data = r.json()
+    return data.get("token")
+
+
+def create_shiprocket_order(main_order_id, user, address, cart_items, payment_method, total_amount):
+    token = get_shiprocket_token()
+    if not token:
+        return {"ok": False, "error": "Shiprocket token generation failed"}
+
+    url = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    order_items = []
+    for item in cart_items:
+        product = item["product"]
+        qty = item["qty"]
+        size = item.get("size") or ""
+        price = float(product.price or 0)
+
+        order_items.append({
+            "name": product.name,
+            "sku": f"{product.id}-{size}" if size else str(product.id),
+            "units": qty,
+            "selling_price": price,
+            "discount": 0,
+            "tax": 0,
+            "hsn": ""
+        })
+
+    payment_mode = "Prepaid" if payment_method == "razorpay" else "COD"
+
+    payload = {
+        "order_id": str(main_order_id),
+        "order_date": time.strftime("%Y-%m-%d %H:%M"),
+        "pickup_location": os.getenv("SHIPROCKET_PICKUP_LOCATION", "Home"),
+        "channel_id": os.getenv("SHIPROCKET_CHANNEL_ID", ""),
+        "comment": "Order from KalaSilks website",
+        "billing_customer_name": address.name or (user.username or "Customer"),
+        "billing_last_name": "",
+        "billing_address": address.house or "",
+        "billing_address_2": address.street or "",
+        "billing_city": address.city or "",
+        "billing_pincode": address.pincode or "",
+        "billing_state": address.state or "",
+        "billing_country": "India",
+        "billing_email": address.email or user.email or "support@kalasilks.com",
+        "billing_phone": address.mobile or user.mobile or "",
+        "shipping_is_billing": True,
+        "order_items": order_items,
+        "payment_method": payment_mode,
+        "sub_total": float(total_amount),
+        "length": float(os.getenv("SHIPROCKET_DEFAULT_LENGTH", 10)),
+        "breadth": float(os.getenv("SHIPROCKET_DEFAULT_BREADTH", 10)),
+        "height": float(os.getenv("SHIPROCKET_DEFAULT_HEIGHT", 5)),
+        "weight": float(os.getenv("SHIPROCKET_DEFAULT_WEIGHT", 0.5))
+    }
+
+    r = requests.post(url, json=payload, headers=headers, timeout=30)
+    print("SHIPROCKET CREATE ORDER:", r.status_code, r.text)
+
+    try:
+        data = r.json()
+    except Exception:
+        data = {"raw": r.text}
+
+    if r.status_code not in (200, 201):
+        return {"ok": False, "error": data}
+
+    return {"ok": True, "data": data}
+
+
+
+
 db.init_app(app)
 
 @app.template_filter("imgsrc")
@@ -1325,6 +1421,12 @@ def razorpay_verify():
             "razorpay_signature": razorpay_signature
         })
 
+        payment = client.payment.fetch(razorpay_payment_id)
+        print("RAZORPAY PAYMENT FETCH:", payment)
+
+        if payment.get("status") != "captured":
+            return "Payment not captured yet ❌", 400
+
         session["payment_method"] = "razorpay"
         session["razorpay_payment_id"] = razorpay_payment_id
 
@@ -1333,6 +1435,30 @@ def razorpay_verify():
     except Exception as e:
         print("RAZORPAY VERIFY ERROR:", e)
         return "Payment verification failed ❌", 400
+
+
+@app.route("/razorpay-webhook", methods=["POST"])
+def razorpay_webhook():
+    payload = request.data
+    signature = request.headers.get("X-Razorpay-Signature")
+    secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+
+    try:
+        client.utility.verify_webhook_signature(
+            payload.decode("utf-8"),
+            signature,
+            secret
+        )
+    except Exception as e:
+        print("Webhook verify failed:", e)
+        return "Invalid webhook", 400
+
+    data = request.json
+    event = data.get("event")
+    print("RAZORPAY WEBHOOK EVENT:", event)
+
+    # later idhi use chesi backup shipment creation cheyyachu
+    return "OK", 200
 
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
@@ -1351,10 +1477,8 @@ def upi_processing():
 from sqlalchemy.orm import joinedload
 
 from urllib.parse import quote
-
 @app.route("/payment-success")
 def payment_success():
-
     if "user_id" not in session:
         return redirect("/login")
 
@@ -1369,32 +1493,17 @@ def payment_success():
         return redirect("/checkout")
 
     created_ids = []
+    cart_items = build_cart_items_from_session(cart)
 
-    for pid, item in cart.items():
+    # 1) STOCK CHECK + ORDER CREATE
+    for item in cart_items:
+        product = item["product"]
+        qty = item["qty"]
+        size = item["size"]
 
-        # ---- SPLIT PRODUCT ID & SIZE ----
-        if "_" in pid:
-            try:
-                product_id, size = pid.split("_")
-                product_id = int(product_id)
-            except ValueError:
-                continue
-        else:
-            product_id = int(pid)
-            size = None
-
-        # ---- GET QUANTITY ----
-        if isinstance(item, dict):
-            qty = item.get("qty", 1)
-        else:
-            qty = item
-
-        # ==================================
-        # STOCK CHECK + REDUCE
-        # ==================================
         if size:
             size_obj = ProductSize.query.filter_by(
-                product_id=product_id,
+                product_id=product.id,
                 size=size
             ).first()
 
@@ -1404,48 +1513,79 @@ def payment_success():
 
             size_obj.stock -= qty
 
-        # ==================================
-        # CREATE ORDER
-        # ==================================
         for _ in range(qty):
             order = Order(
-                order_id="SKS" + str(int(time.time() * 1000)),
+                order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
                 user_id=session["user_id"],
-                product_id=product_id,
+                product_id=product.id,
                 address_id=address_id,
                 payment_method=payment_method,
                 status="PLACED",
-                size=size
+                size=size,
+                payment_id=session.get("razorpay_payment_id")
             )
-
             db.session.add(order)
             db.session.flush()
             created_ids.append(order.id)
+            time.sleep(0.001)  # unique order_id kosam tiny delay
 
     db.session.commit()
 
-    # ---- FETCH CREATED ORDERS ----
     orders = Order.query.options(
         joinedload(Order.product),
         joinedload(Order.address)
     ).filter(Order.id.in_(created_ids)).all()
 
-    final_amount = session.get("total_after_coupon", 0)
+    final_amount = session.get("final_amount") or session.get("total_after_coupon", 0)
 
+    # 2) SHIPROCKET CREATE
+    try:
+        user = User.query.get(session["user_id"])
+        address = Address.query.get(address_id)
+
+        # One grouped order id for Shiprocket
+        master_order_id = orders[0].order_id if orders else "SKSORDER"
+
+        sr_result = create_shiprocket_order(
+            main_order_id=master_order_id,
+            user=user,
+            address=address,
+            cart_items=cart_items,
+            payment_method=payment_method,
+            total_amount=final_amount
+        )
+
+        if sr_result["ok"]:
+            sr_data = sr_result["data"]
+
+            shiprocket_order_id = sr_data.get("order_id")
+            shipment_id = sr_data.get("shipment_id")
+            status_text = sr_data.get("status") or "CREATED"
+
+            for o in orders:
+                o.shiprocket_order_id = str(shiprocket_order_id or "")
+                o.shiprocket_shipment_id = str(shipment_id or "")
+                o.shiprocket_status = status_text
+
+            db.session.commit()
+        else:
+            print("Shiprocket create failed:", sr_result["error"])
+
+    except Exception as e:
+        print("Shiprocket integration failed:", e)
+
+    # 3) EMAIL / WHATSAPP
     try:
         user = User.query.get(session["user_id"])
         address = Address.query.get(address_id)
 
         customer_name = user.username or "Customer"
         customer_mobile = user.mobile or ""
-
         city = (address.city or "").strip() if address else ""
         delivery_days = "2-3"
         order_no = orders[0].order_id if orders else "SKSORDER"
 
-        # -------- ADDRESS HTML --------
         address_html = ""
-
         if address:
             address_html = f"""
             <div>
@@ -1457,37 +1597,24 @@ def payment_success():
             </div>
             """
 
-        # -------- ITEMS HTML --------
         items_html = ""
-
         for o in orders:
-
             product_name = o.product.name if o.product else "Product"
             product_price = getattr(o.product, "price", 0) if o.product else 0
 
             product_image_url = "https://www.kalasilks.com/static/images/placeholder.png"
-
             if o.product and o.product.image:
                 img = o.product.image.strip()
                 encoded_img = quote(img)
 
-                if img.startswith("http://") or img.startswith("https://"):
+                if img.startswith(("http://", "https://")):
                     product_image_url = img
-
                 elif img.startswith("static/"):
                     product_image_url = f"https://www.kalasilks.com/{encoded_img}"
-
-                elif img.startswith("images/"):
+                elif img.startswith(("images/", "uploads/")):
                     product_image_url = f"https://www.kalasilks.com/static/{encoded_img}"
-
-                elif img.startswith("uploads/"):
-                    product_image_url = f"https://www.kalasilks.com/static/{encoded_img}"
-
                 else:
                     product_image_url = f"https://www.kalasilks.com/static/images/{encoded_img}"
-
-            print("DEBUG PRODUCT IMAGE:", o.product.image if o.product else "NO PRODUCT")
-            print("DEBUG PRODUCT IMAGE URL:", product_image_url)
 
             items_html += f"""
             <table style="width:100%; margin-bottom:18px; border-collapse:collapse;">
@@ -1495,12 +1622,10 @@ def payment_success():
                     <td style="width:90px; vertical-align:top;">
                         <img src="{product_image_url}" alt="{product_name}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #333;">
                     </td>
-
                     <td style="vertical-align:top;color:#ffffff;font-size:15px;line-height:1.5;">
                         <div style="font-weight:bold;">{product_name}</div>
                         <div style="color:#cccccc;">Size: {o.size or '-'}</div>
                     </td>
-
                     <td style="text-align:right;vertical-align:top;color:#ffffff;font-weight:bold;font-size:15px;">
                         ₹{product_price}
                     </td>
@@ -1508,11 +1633,8 @@ def payment_success():
             </table>
             """
 
-        # -------- ORDERS LINK --------
         orders_link = "https://www.kalasilks.com/my-orders"
-        print("DEBUG ORDERS LINK:", orders_link)
 
-        # -------- WHATSAPP --------
         if customer_mobile:
             send_whatsapp_order_confirmation(
                 customer_mobile,
@@ -1523,7 +1645,6 @@ def payment_success():
                 city or "Your City"
             )
 
-        # -------- EMAIL --------
         if user and user.email:
             send_order_email(
                 user,
@@ -1537,15 +1658,19 @@ def payment_success():
     except Exception as e:
         print("Order WhatsApp/Email send failed:", e)
 
-    # ---- CLEAR CART ----
+    # 4) CLEAR SESSION
     session.pop("cart", None)
     session.pop("total_after_coupon", None)
+    session.pop("final_amount", None)
 
     return render_template(
         "payment_success.html",
         orders=orders,
         final_amount=final_amount
     )
+
+
+    
 @app.route("/shop")
 def shop():
 
