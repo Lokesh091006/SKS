@@ -314,6 +314,35 @@ def get_shiprocket_token():
     return data.get("token")
 
 
+def build_cart_items_from_session(cart):
+    cart_items = []
+
+    for key, item in cart.items():
+
+        if "_" in key:
+            pid, size = key.split("_", 1)
+        else:
+            pid = key
+            size = None
+
+        product = Product.query.get(int(pid))
+        if not product:
+            continue
+
+        if isinstance(item, dict):
+            qty = item.get("qty", 1)
+        else:
+            qty = item
+
+        cart_items.append({
+            "product": product,
+            "qty": qty,
+            "size": size
+        })
+
+    return cart_items
+
+
 def create_shiprocket_order(main_order_id, user, address, cart_items, payment_method, total_amount):
     token = get_shiprocket_token()
     if not token:
