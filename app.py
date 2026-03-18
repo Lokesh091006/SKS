@@ -299,20 +299,35 @@ print("DATABASE_URL USED:", app.config["SQLALCHEMY_DATABASE_URI"])
 
 def get_shiprocket_token():
     url = "https://apiv2.shiprocket.in/v1/external/auth/login"
+
+    email = os.getenv("SHIPROCKET_EMAIL", "").strip()
+    password = os.getenv("SHIPROCKET_PASSWORD", "").strip()
+
+    print("DEBUG SHIPROCKET EMAIL RAW:", repr(email))
+    print("DEBUG SHIPROCKET PASSWORD LEN:", len(password))
+
     payload = {
-        "email": os.getenv("SHIPROCKET_EMAIL"),
-        "password": os.getenv("SHIPROCKET_PASSWORD")
+        "email": email,
+        "password": password
     }
 
-    r = requests.post(url, json=payload, timeout=20)
-    print("SHIPROCKET AUTH:", r.status_code, r.text)
+    try:
+        r = requests.post(url, json=payload, timeout=20)
+        print("SHIPROCKET AUTH:", r.status_code, r.text)
+    except Exception as e:
+        print("SHIPROCKET AUTH REQUEST ERROR:", e)
+        return None
 
     if r.status_code not in (200, 201):
         return None
 
-    data = r.json()
-    return data.get("token")
+    try:
+        data = r.json()
+    except Exception as e:
+        print("SHIPROCKET AUTH JSON ERROR:", e)
+        return None
 
+    return data.get("token")
 
 def build_cart_items_from_session(cart):
     cart_items = []
@@ -342,11 +357,14 @@ def build_cart_items_from_session(cart):
 
     return cart_items
 
-
 def create_shiprocket_order(main_order_id, user, address, cart_items, payment_method, total_amount):
     token = get_shiprocket_token()
     if not token:
         return {"ok": False, "error": "Shiprocket token generation failed"}
+
+    print("DEBUG PICKUP LOCATION:", repr(os.getenv("SHIPROCKET_PICKUP_LOCATION", "Home").strip()))
+    print("DEBUG CUSTOMER EMAIL:", repr(address.email or user.email or "support@kalasilks.com"))
+    print("DEBUG CUSTOMER PHONE:", repr(address.mobile or user.mobile or ""))
 
     url = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc"
     headers = {
@@ -376,19 +394,19 @@ def create_shiprocket_order(main_order_id, user, address, cart_items, payment_me
     payload = {
         "order_id": str(main_order_id),
         "order_date": time.strftime("%Y-%m-%d %H:%M"),
-        "pickup_location": os.getenv("SHIPROCKET_PICKUP_LOCATION", "Home"),
-        "channel_id": os.getenv("SHIPROCKET_CHANNEL_ID", ""),
+        "pickup_location": os.getenv("SHIPROCKET_PICKUP_LOCATION", "Home").strip(),
+        "channel_id": os.getenv("SHIPROCKET_CHANNEL_ID", "").strip(),
         "comment": "Order from KalaSilks website",
         "billing_customer_name": address.name or (user.username or "Customer"),
         "billing_last_name": "",
-        "billing_address": address.house or "",
-        "billing_address_2": address.street or "",
-        "billing_city": address.city or "",
-        "billing_pincode": address.pincode or "",
-        "billing_state": address.state or "",
+        "billing_address": (address.house or "").strip(),
+        "billing_address_2": (address.street or "").strip(),
+        "billing_city": (address.city or "").strip(),
+        "billing_pincode": str(address.pincode or "").strip(),
+        "billing_state": (address.state or "").strip(),
         "billing_country": "India",
-        "billing_email": address.email or user.email or "support@kalasilks.com",
-        "billing_phone": address.mobile or user.mobile or "",
+        "billing_email": (address.email or user.email or "support@kalasilks.com").strip(),
+        "billing_phone": str(address.mobile or user.mobile or "").strip(),
         "shipping_is_billing": True,
         "order_items": order_items,
         "payment_method": payment_mode,
@@ -399,8 +417,14 @@ def create_shiprocket_order(main_order_id, user, address, cart_items, payment_me
         "weight": float(os.getenv("SHIPROCKET_DEFAULT_WEIGHT", 0.5))
     }
 
-    r = requests.post(url, json=payload, headers=headers, timeout=30)
-    print("SHIPROCKET CREATE ORDER:", r.status_code, r.text)
+    print("DEBUG SHIPROCKET PAYLOAD:", payload)
+
+    try:
+        r = requests.post(url, json=payload, headers=headers, timeout=30)
+        print("SHIPROCKET CREATE ORDER:", r.status_code, r.text)
+    except Exception as e:
+        print("SHIPROCKET CREATE REQUEST ERROR:", e)
+        return {"ok": False, "error": str(e)}
 
     try:
         data = r.json()
@@ -1216,15 +1240,19 @@ def role_required(role):
 
 @app.route("/make-admin")
 def make_admin():
-    user = User.query.filter_by(mobile="7993412492").first()
 
-    if user:
-        user.role = "admin"
-        db.session.commit()
-        return "Admin created ✅"
-    else:
-        return "User not found ❌"
+    user1 = User.query.filter_by(mobile="7993412492").first()
+    user2 = User.query.filter_by(mobile="9985212492").first()
 
+    if user1:
+        user1.role = "admin"
+
+    if user2:
+        user2.role = "admin"
+
+    db.session.commit()
+
+    return "Admins created ✅"
 
 
 
