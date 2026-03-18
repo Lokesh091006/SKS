@@ -1358,14 +1358,23 @@ def manage_products():
     products = Product.query.all()
     return render_template("admin/manage_products.html", products=products)
 
-@app.route("/admin/delete-product/<int:id>")
+@app.route("/admin/delete-product/<int:id>", methods=["POST"])
 @role_required("admin")
 def delete_product(id):
-    product = Product.query.get_or_404(id)
-    db.session.delete(product)
-    db.session.commit()
-    return redirect("/admin/products")
+    try:
+        product = Product.query.get_or_404(id)
 
+        db.session.delete(product)
+        db.session.commit()
+
+        flash("Product deleted successfully ✅", "success")
+        return redirect("/admin/products")
+
+    except Exception as e:
+        db.session.rollback()
+        print("DELETE PRODUCT ERROR:", e)
+        flash(f"Error deleting product: {str(e)}", "danger")
+        return redirect("/admin/products")
 
 @app.route("/admin/edit-product/<int:id>", methods=["GET", "POST"])
 @role_required("admin")
