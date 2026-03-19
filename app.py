@@ -340,7 +340,7 @@ def build_cart_items_from_session(cart):
             pid = key
             size = None
 
-        product = Product.query.get(int(pid))
+        product = Product.query.filter_by(id=int(pid), is_active=True).first()
         if not product:
             continue
 
@@ -497,7 +497,8 @@ def home():
                 Product.name.ilike(f"%{base}%")
             )
 
-        products = Product.query.filter_by(is_active=True).all()
+        
+        products = products_query.all()
 
         # 🔥 SMART CATEGORY DETECTION
         if products:
@@ -512,8 +513,11 @@ def home():
             else:
                 page = "home"
 
+    
     else:
-        products = Product.query.all()
+
+
+        products = Product.query.filter_by(is_active=True).all()
 
     return render_template(
         "home.html",
@@ -989,7 +993,7 @@ def cart():
             else:
                 size = "M"
 
-        product = Product.query.get(int(pid))
+        product = Product.query.filter_by(id=int(pid), is_active=True).first()
         if not product:
             continue
 
