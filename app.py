@@ -1404,36 +1404,44 @@ def delete_product(id):
 @role_required("admin")
 def edit_product(id):
     product = Product.query.get_or_404(id)
+    size_rows = ProductSize.query.filter_by(product_id=id).all()
 
     if request.method == "POST":
-        # 🔹 Basic details update
-        product.name = request.form["name"]
-        product.price = request.form["price"]
-        product.category = request.form["category"]
+        sizes = product.sizes or ""
+        stocks = request.form.get("stocks", "").strip()
 
-        # 🔹 Fetch all sizes for this product
-        sizes = ProductSize.query.filter_by(product_id=id).all()
+        size_list = [s.strip() for s in sizes.split(",") if s.strip()]
+        stock_list = [s.strip() for s in stocks.split(",") if s.strip()]
 
-        # 🔥 UPDATE STOCK BASED ON SIZE
-        for s in sizes:
-            if s.size == "S":
-                s.stock = int(request.form.get("stock_s") or 0)
+        if len(size_list) != len(stock_list):
+            flash("Stocks count should match sizes count ❌", "danger")
+            return redirect(url_for("edit_product", id=id))
 
-            elif s.size == "M":
-                s.stock = int(request.form.get("stock_m") or 0)
+        ProductSize.query.filter_by(product_id=id).delete()
 
-            elif s.size == "L":
-                s.stock = int(request.form.get("stock_l") or 0)
+        for i in range(len(size_list)):
+            ps = ProductSize(
+                product_id=product.id,
+                size=size_list[i],
+                stock=int(stock_list[i] or 0)
+            )
+            db.session.add(ps)
 
-        # 🔥 SAVE ALL CHANGES
         update_product_visibility(product.id)
         db.session.commit()
 
-        # 🔹 Redirect back to manage page
+        flash("Stock updated successfully ✅", "success")
         return redirect(url_for("manage_products"))
 
-    return render_template("admin/edit_product.html", product=product)
+    sizes_text = ",".join([s.size for s in size_rows])
+    stocks_text = ",".join([str(s.stock or 0) for s in size_rows])
 
+    return render_template(
+        "admin/edit_product.html",
+        product=product,
+        sizes_text=sizes_text,
+        stocks_text=stocks_text
+    )
     
 
 
