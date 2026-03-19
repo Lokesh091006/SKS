@@ -15,3 +15,4 @@ class Product(db.Model):
     image2 = db.Column(db.String(200))
     image3 = db.Column(db.String(200))
 
+    is_active = db.Column(db.Boolean, default=True)

@@ -441,6 +441,14 @@ def create_shiprocket_order(main_order_id, user, address, cart_items, payment_me
 
 db.init_app(app)
 
+def update_product_visibility(product_id):
+    sizes = ProductSize.query.filter_by(product_id=product_id).all()
+    total_stock = sum((s.stock or 0) for s in sizes)
+
+    product = Product.query.get(product_id)
+    if product:
+        product.is_active = total_stock > 0
+
 @app.template_filter("imgsrc")
 def imgsrc(path):
     if not path:
@@ -481,7 +489,7 @@ def home():
 
     if query:
         words = query.lower().split()
-        products_query = Product.query
+        products_query = Product.query.filter_by(is_active=True)
 
         for w in words:
             base = w.rstrip("s")
@@ -489,7 +497,7 @@ def home():
                 Product.name.ilike(f"%{base}%")
             )
 
-        products = products_query.all()
+        products = Product.query.filter_by(is_active=True).all()
 
         # 🔥 SMART CATEGORY DETECTION
         if products:
@@ -774,7 +782,7 @@ def edit_profile():
 @app.route("/wishlist")
 def wishlist():
     wishlist_ids = session.get("wishlist", [])
-    wishlist_products = [p for p in Product.query.all() if p.id in wishlist_ids]
+    wishlist_products = [p for p in Product.query.filter_by(is_active=True).all() if p.id in wishlist_ids]
     return render_template("wishlist.html", products=wishlist_products)
 
 
@@ -849,7 +857,7 @@ def category(name):
     brand = request.args.get("brand")   # NEW
     sub = request.args.get("sub")       # NEW
 
-    query = Product.query.filter(Product.category.ilike(f"%{name}%"))
+    query = Product.query.filter_by(is_active=True).filter(Product.category.ilike(f"%{name}%"))
 
     if q:
         query = query.filter(Product.name.ilike(f"%{q}%"))
@@ -895,7 +903,7 @@ from sqlalchemy import and_
 def search():
     q = request.args.get("q", "").strip().lower()
 
-    products = Product.query
+    products = Product.query.filter_by(is_active=True)
 
     if q:
         words = q.replace("-", " ").split()
@@ -938,7 +946,7 @@ def live_search():
 
     words = q.lower().split()
 
-    products = Product.query
+    products = Product.query.filter_by(is_active=True)
 
     for w in words:
         base = w.rstrip("s")
@@ -1036,6 +1044,12 @@ def add_to_cart(product_id):
     pid = str(product_id)
 
     size = request.args.get("size")
+    product = Product.query.filter_by(id=product_id, is_active=True).first()
+    if not product:
+
+
+        flash("This product is unavailable ❌", "error")
+        return redirect(request.referrer or "/")
 
     # ❌ size lekapothe block
     if not size:
@@ -1342,6 +1356,8 @@ def add_product():
                     db.session.add(ps)
 
                 db.session.commit()
+                update_product_visibility(new_product.id)
+                db.session.commit()
 
             return redirect("/admin/dashboard")
 
@@ -1364,17 +1380,21 @@ def delete_product(id):
     try:
         product = Product.query.get_or_404(id)
 
+        # first delete all size-stock rows
+        ProductSize.query.filter_by(product_id=product.id).delete()
+
+        # then delete main product
         db.session.delete(product)
         db.session.commit()
 
         flash("Product deleted successfully ✅", "success")
-        return redirect("/admin/products")
 
     except Exception as e:
         db.session.rollback()
         print("DELETE PRODUCT ERROR:", e)
         flash(f"Error deleting product: {str(e)}", "danger")
-        return redirect("/admin/products")
+
+    return redirect("/admin/products")
 
 @app.route("/admin/edit-product/<int:id>", methods=["GET", "POST"])
 @role_required("admin")
@@ -1402,6 +1422,7 @@ def edit_product(id):
                 s.stock = int(request.form.get("stock_l") or 0)
 
         # 🔥 SAVE ALL CHANGES
+        update_product_visibility(product.id)
         db.session.commit()
 
         # 🔹 Redirect back to manage page
@@ -1578,6 +1599,7 @@ def payment_success():
                 return redirect("/cart")
 
             size_obj.stock -= qty
+            update_product_visibility(product.id)
 
         for _ in range(qty):
             order = Order(
@@ -1751,7 +1773,7 @@ def shop():
     size = request.args.get("size")
     brand = request.args.get("brand")
 
-    query = Product.query
+    query = Product.query.filter_by(is_active=True)
 
     # 🔍 SEARCH
     if q:
@@ -1841,7 +1863,7 @@ def confirm_order():
 
 @app.route("/product/<int:pid>")
 def product_page(pid):
-    product = Product.query.get_or_404(pid)
+    product = Product.query.filter_by(id=pid, is_active=True).first_or_404()
     sizes = ProductSize.query.filter_by(product_id=pid).all()
 
     return render_template("product.html", product=product, sizes=sizes)
