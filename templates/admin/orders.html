@@ -2,99 +2,208 @@
 <html>
 <head>
   <title>Admin Orders</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
+      font-family: "Segoe UI", sans-serif;
+      background: #f6f7fb;
+      margin: 0;
       padding: 20px;
     }
 
     h2 {
       text-align: center;
       margin-bottom: 20px;
+      color: #333;
     }
 
+    /* TOP BAR */
     .topbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
     .topbar a {
       text-decoration: none;
-      color: black;
-      font-weight: bold;
+      font-weight: 600;
+      color: #ff3f6c;
     }
 
+    /* CARD */
     .order-card {
       background: white;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      transition: 0.3s;
+    }
+
+    .order-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
 
     .row {
       margin: 6px 0;
+      font-size: 14px;
     }
 
+    /* STATUS BADGES */
     .status {
       display: inline-block;
-      padding: 4px 8px;
-      border-radius: 6px;
-      color: white;
-      background: green;
+      padding: 6px 12px;
+      border-radius: 20px;
       font-size: 12px;
       font-weight: bold;
+      color: white;
     }
 
+    .placed { background: #ffa500; }
+    .shipped { background: #007bff; }
+    .out-for-delivery { background: #6f42c1; }
+    .delivered { background: #28a745; }
+    .cancelled { background: #dc3545; }
+    .pickup-pending { background: #ff3f6c; }
+
+    /* IMAGE */
     img {
       width: 70px;
       height: 70px;
       object-fit: cover;
-      border-radius: 8px;
+      border-radius: 10px;
       margin-top: 10px;
     }
+
+    /* GRID */
+    .order-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
+
+    /* EXTRA INFO */
+    .label {
+      color: #777;
+      font-weight: 500;
+    }
+
+    /* TRACK BUTTON */
+    .track-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 7px 14px;
+      background: #ff3f6c;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .track-btn:hover {
+      background: #e6335f;
+    }
+
   </style>
 </head>
+
 <body>
 
 <div class="topbar">
   <a href="/admin/dashboard">⬅ Back</a>
-  <h2>Admin Orders</h2>
+  <h2>📦 Admin Orders</h2>
   <a href="/">🏠 Home</a>
 </div>
 
 {% if orders %}
-  {% for order in orders %}
-    <div class="order-card">
-      <div class="row"><strong>Order ID:</strong> {{ order.order_id }}</div>
-      <div class="row"><strong>Status:</strong> <span class="status">{{ order.status }}</span></div>
-      <div class="row"><strong>Payment:</strong> {{ order.payment_method }}</div>
-      <div class="row"><strong>Size:</strong> {{ order.size or "-" }}</div>
 
-      {% if order.product %}
-        <div class="row"><strong>Product:</strong> {{ order.product.name }}</div>
-        <div class="row"><strong>Price:</strong> ₹{{ order.product.price }}</div>
-        {% if order.product.image %}
-          <img src="{{ order.product.image }}" alt="{{ order.product.name }}">
-        {% endif %}
-      {% endif %}
+<div class="order-grid">
 
-      {% if order.address %}
-        <div class="row"><strong>Customer:</strong> {{ order.address.name }}</div>
-        <div class="row"><strong>Mobile:</strong> {{ order.address.mobile }}</div>
-        <div class="row">
-          <strong>Address:</strong>
-          {{ order.address.house }},
-          {{ order.address.street }},
-          {{ order.address.city }},
-          {{ order.address.state }} - {{ order.address.pincode }}
-        </div>
-      {% endif %}
+{% for order in orders %}
+<div class="order-card">
+
+  <div class="row">
+    <strong>Order ID:</strong> {{ order.order_id }}
+  </div>
+
+  <div class="row">
+    <strong>Status:</strong>
+
+    {% if order.status == "PLACED" %}
+      <span class="status placed">PLACED</span>
+
+    {% elif order.status == "SHIPPED" %}
+      <span class="status shipped">SHIPPED</span>
+
+    {% elif order.status == "OUT FOR DELIVERY" %}
+      <span class="status out-for-delivery">OUT FOR DELIVERY</span>
+
+    {% elif order.status == "DELIVERED" %}
+      <span class="status delivered">DELIVERED</span>
+
+    {% elif order.status == "CANCELLED" %}
+      <span class="status cancelled">CANCELLED</span>
+
+    {% elif order.status == "PICKUP PENDING" %}
+      <span class="status pickup-pending">PICKUP PENDING</span>
+
+    {% else %}
+      <span class="status placed">{{ order.status }}</span>
+    {% endif %}
+  </div>
+
+  <div class="row">
+    <span class="label">Payment:</span> {{ order.payment_method }}
+  </div>
+
+  <div class="row">
+    <span class="label">Size:</span> {{ order.size or "-" }}
+  </div>
+
+  {% if order.product %}
+    <div class="row"><strong>{{ order.product.name }}</strong></div>
+    <div class="row">₹{{ order.product.price }}</div>
+
+    {% if order.product.image %}
+      <img src="{{ order.product.image }}">
+    {% endif %}
+  {% endif %}
+
+  {% if order.address %}
+    <div class="row"><strong>{{ order.address.name }}</strong></div>
+    <div class="row">{{ order.address.mobile }}</div>
+    <div class="row">
+      {{ order.address.city }}, {{ order.address.state }} - {{ order.address.pincode }}
     </div>
-  {% endfor %}
+  {% endif %}
+
+  {% if order.awb_code %}
+    <div class="row">
+      <span class="label">AWB:</span> {{ order.awb_code }}
+    </div>
+  {% endif %}
+
+  {% if order.courier_name %}
+    <div class="row">
+      <span class="label">Courier:</span> {{ order.courier_name }}
+    </div>
+  {% endif %}
+
+  {% if order.tracking_url %}
+    <a href="{{ order.tracking_url }}" target="_blank" class="track-btn">
+      📍 Track Shipment
+    </a>
+  {% endif %}
+
+</div>
+{% endfor %}
+
+</div>
+
 {% else %}
   <p style="text-align:center;">No orders found.</p>
 {% endif %}

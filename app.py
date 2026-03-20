@@ -857,33 +857,32 @@ def my_orders():
 
 @app.route("/category/<name>")
 def category(name):
-
     q = request.args.get("q")
     min_price = request.args.get("min")
     max_price = request.args.get("max")
     color = request.args.get("color")
     type_ = request.args.get("type")
-    brand = request.form.get("brand")
+    brand = request.args.get("brand")
     sort = request.args.get("sort")
-    brand = request.args.get("brand")   # NEW
-    sub = request.args.get("sub")       # NEW
+    sub = request.args.get("sub")
 
-    query = Product.query.filter_by(is_active=True).filter(Product.category.ilike(f"%{name}%"))
+    # ✅ exact category match
+    query = Product.query.filter_by(is_active=True).filter(Product.category.ilike(name))
 
     if q:
         query = query.filter(Product.name.ilike(f"%{q}%"))
 
     if type_:
-        query = query.filter(Product.type.ilike(f"%{type_}%"))
+        query = query.filter(Product.type.ilike(type_))
 
     if brand:
-        query = query.filter(Product.brand.ilike(f"%{brand}%"))
+        query = query.filter(Product.brand.ilike(brand))
 
     if sub:
-        query = query.filter(Product.sub.ilike(f"%{sub}%"))
+        query = query.filter(Product.sub.ilike(sub))
 
     if color:
-        query = query.filter_by(color=color)
+        query = query.filter(Product.color.ilike(color))
 
     if min_price:
         query = query.filter(Product.price >= int(min_price))
@@ -899,10 +898,8 @@ def category(name):
         query = query.order_by(Product.name.asc())
 
     products = query.all()
-    
 
     return render_template("shop.html", products=products, page=name)
-
 
 
 
@@ -1542,27 +1539,35 @@ def tracking_webhook():
 
         order_id = data.get("order_id")
         status = data.get("current_status")
+        awb = data.get("awb")
+        courier = data.get("courier_name")
 
         order = Order.query.filter_by(order_id=order_id).first()
 
-        if order and status:
-            status_upper = status.upper()
+        if not order:
+            print("ORDER NOT FOUND:", order_id)
+            return "OK", 200
 
-            if "DELIVERED" in status_upper:
-                order.status = "DELIVERED"
-            elif "OUT FOR DELIVERY" in status_upper:
-                order.status = "OUT FOR DELIVERY"
-            elif "SHIPPED" in status_upper or "IN TRANSIT" in status_upper:
-                order.status = "SHIPPED"
-            elif "CANCELLED" in status_upper:
-                order.status = "CANCELLED"
-            elif "OUT FOR PICKUP" in status_upper or "PICKUP" in status_upper:
-                order.status = "PICKUP PENDING"
+        # ✅ CORRECT FIELD NAMES
+        order.awb_code = awb
+        order.courier_name = courier
 
-            db.session.commit()
-            print("STATUS UPDATED:", order.order_id, order.status)
-        else:
-            print("ORDER NOT FOUND OR STATUS MISSING:", order_id, status)
+        # status update
+        status_upper = status.upper()
+
+        if "DELIVERED" in status_upper:
+            order.status = "DELIVERED"
+        elif "OUT FOR DELIVERY" in status_upper:
+            order.status = "OUT FOR DELIVERY"
+        elif "SHIPPED" in status_upper or "IN TRANSIT" in status_upper:
+            order.status = "SHIPPED"
+        elif "CANCELLED" in status_upper:
+            order.status = "CANCELLED"
+        elif "PICKUP" in status_upper:
+            order.status = "PICKUP PENDING"
+
+        db.session.commit()
+        print("UPDATED:", order.order_id, order.status)
 
     except Exception as e:
         print("WEBHOOK ERROR:", e)

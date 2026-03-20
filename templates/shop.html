@@ -6,174 +6,213 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
 <style>
 body{
     font-family: Arial, sans-serif;
-    margin:0;
+    margin: 0;
+    padding: 0;
+    background: #f5f5f5;
 }
 
 /* TOP BAR */
 .shop-topbar{
-    display:flex;
-    align-items:center;
-    gap:15px;
-    padding:15px 20px;
-    font-size:22px;
-    font-weight:bold;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    font-size: 22px;
+    font-weight: bold;
     width: 100%;
+    box-sizing: border-box;
 }
 
 /* FILTER ICON */
 .filter-toggle{
-    font-size:26px;
-    cursor:pointer;
-    background:#eee;
-    padding:6px 12px;
-    border-radius:8px;
-
-    position: relative;   /* 🔥 ADD */
-    z-index: 100000;      /* 🔥 ADD */
+    font-size: 26px;
+    cursor: pointer;
+    background: #eee;
+    padding: 6px 12px;
+    border-radius: 8px;
+    position: relative;
+    z-index: 100000;
 }
 
-/* LAYOUT */
+/* MAIN LAYOUT */
 .shop-layout{
     display: flex;
-    position: relative;
-    z-index: 1;
+    gap: 20px;
+    padding: 20px;
+    box-sizing: border-box;
+    align-items: flex-start;
 }
-/* ===== FILTER SIDEBAR ===== */
+
+/* FILTER SIDEBAR */
 .filters{
-    width:260px;
-    background:#fff;
-    padding:20px;
-   
+    width: 260px;
+    background: #fff;
+    padding: 20px;
+    box-sizing: border-box;
+
     position: fixed;
-    top:80px;              /* 🔥 header height */
-    left:0;
-    height:calc(100vh - 80px);
+    top: 80px;
+    left: 0;
+    height: calc(100vh - 80px);
 
     transform: translateX(-100%);
     transition: transform 0.3s ease;
 
-    z-index:9999;
+    z-index: 9999;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.08);
 }
 
 .filters.active{
     transform: translateX(0);
 }
-@media (min-width: 992px){
-
-    .filters{
-        position: static;
-        height:auto;
-        left:0;
-    }
-
-    .shop-layout{
-        display:flex;
-        gap:20px;
-        padding:20px;
-    }
-
-    .products{
-        flex:1;
-        grid-template-columns: repeat(4,1fr);
-    }
-}
-/* MOBILE FIX */
 
 /* FILTER SECTION */
 .filter-section{
-    margin-bottom:20px;
-    border-bottom:1px solid #eee;
-    padding-bottom:15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
 }
 
 .filter-section h4{
-    font-size:16px;
-    font-weight:600;
-    margin-bottom:10px;
-    cursor:pointer;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    cursor: pointer;
 }
 
-/* OPTIONS */
 .filter-section a{
-    display:block;
-    padding:6px 0;
-    text-decoration:none;
-    color:#333;
-    transition:0.2s;
+    display: block;
+    padding: 6px 0;
+    text-decoration: none;
+    color: #333;
+    transition: 0.2s;
 }
 
 .filter-section a:hover{
-    color:#ff4d8d;
-    padding-left:5px;
+    color: #ff4d8d;
+    padding-left: 5px;
 }
 
-/* FILTER TREE */
 .sub-box{
-    display:none;
-    margin-left:10px;
+    display: none;
+    margin-left: 10px;
 }
 
 .sub-box-inner{
-    display:none;
-    margin-left:15px;
+    display: none;
+    margin-left: 15px;
 }
 
 .sub-box a{
-    display:block;
-    padding:6px 0;
-    text-decoration:none;
-    color:black;
+    display: block;
+    padding: 6px 0;
+    text-decoration: none;
+    color: black;
 }
 
 .sub-box p{
-    cursor:pointer;
-    margin:5px 0;
+    cursor: pointer;
+    margin: 5px 0;
 }
-.home-shop{
-    display:flex;
-    align-items:flex-start;
+
+.sort-box{
+    margin-top: 15px;
 }
+
+.sort-box select{
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    outline: none;
+}
+
 /* PRODUCTS GRID */
 .products{
+    flex: 1;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     padding: 10px;
     width: 100%;
-    box-sizing:border-box;
+    box-sizing: border-box;
+    align-content: start;
 }
 
-
+/* CARD */
 .card{
-    background:white;
-    border-radius:12px;
-    padding:12px;
-    box-shadow:0 0 10px rgba(0,0,0,0.08);
-    text-align:center;
-    width:100%;
-    max-width:100%;
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.08);
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.card a{
+    text-decoration: none;
+    color: inherit;
 }
 
 .card img{
-    width:100%;
-    height:220px;
-    object-fit:cover;
-    border-radius:10px;
-     
-    max-width:100%;
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    border-radius: 10px;
+    max-width: 100%;
 }
 
-/* MOBILE FIX */
+.card h4{
+    margin: 10px 0 6px;
+    font-size: 16px;
+    color: #222;
+}
 
-
+.card b{
+    color: #ff2e63;
+    font-size: 18px;
+}
 
 /* DESKTOP */
-@media (min-width: 992px) {
-    .products {
+@media (min-width: 992px){
+    .filters{
+        position: static;
+        top: auto;
+        left: auto;
+        height: auto;
+        transform: none;
+        transition: none;
+        box-shadow: none;
+        flex-shrink: 0;
+    }
+
+    .products{
         grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* MOBILE */
+@media (max-width: 991px){
+    .shop-layout{
+        padding: 10px;
+        gap: 0;
+    }
+
+    .products{
+        grid-template-columns: repeat(2, 1fr);
+        padding: 8px;
+        gap: 10px;
+    }
+
+    .card img{
+        height: 180px;
     }
 }
 </style>
@@ -185,219 +224,173 @@ body{
 
 <!-- TOP BAR -->
 <div class="shop-topbar">
-    <div class="filter-toggle" >☰</div>
- 
+    <div class="filter-toggle">☰</div>
     Filters
-
-  
 </div>
-
 
 <div class="shop-layout">
-    
 
-<!-- ================= FILTER SIDEBAR ================= -->
-<div class="filters" id="filterBox">
+    <!-- FILTER SIDEBAR -->
+    <div class="filters" id="filterBox">
 
-<!-- ===== HOME ===== -->
-{% if page == "home" %}
-
-<div class="filter-section">
-  <h4>Categories</h4>
-
-  <a href="/category/men">Men</a>
-  <a href="/category/women">Women</a>
-  <a href="/category/kids">Kids</a>
-
-</div>
-
-{% endif %}
-
-
-<!-- ===== MEN ===== -->
-{% if page == "men" %}
-<div class="filter-section">
-  <h4 onclick="toggleSection('menBox')">Men ▾</h4>
-
-  <div id="menBox" class="sub-box" style="display:block;">
-
-    <p onclick="toggleSection('shirtBox')">Shirts ▸</p>
-    <div id="shirtBox" class="sub-box-inner">
-  <a href="/category/men?type=shirt&brand=ramraj">Ramraj</a>
-  <a href="/category/men?type=shirt&brand=coolcolours">Coolcolours</a>
-  <a href="/category/men?type=shirt&brand=whitehouse">White House</a>
-  <a href="/category/men?type=shirt&brand=red_white">Red & White</a>
-  <a href="/category/men?type=shirt&brand=oyemberg">Oyemberg</a>
-</div>
-
-    <p><a href="/category/men?type=tshirt">T-Shirts</a></p>
-    <p><a href="/category/men?type=jeans">Jeans</a></p>
-    <p><a href="/category/men?type=Cottonpants">Cotton Pants</a></p>
-    <p><a href="/category/men?type=Nightwear">Night Wear</a></p>
-
-  </div>
-    <select id="sortSelect" onchange="sortProducts()">
-        <option value="">Sort</option>
-        <option value="low">Price: Low → High</option>
-        <option value="high">Price: High → Low</option>
-    </select>
-</div>
-{% endif %}
-
-
-<!-- ===== WOMEN ===== -->
-{% if page == "women" %}
-<div class="filter-section">
-  <h4 onclick="toggleSection('womenBox')">Women ▾</h4>
-
-  <div id="womenBox" class="sub-box" style="display:block;">
-
-    <p onclick="toggleSection('sareeBox')">Sarees ▸</p>
-    <div id="sareeBox" class="sub-box-inner">
-        <a href="{{ url_for('category', name='women', type='saree', brand='pattusarees') }}">Pattu Sarees</a>
-
-<a href="{{ url_for('category', name='women', type='saree', brand='cottonsarees') }}">Cotton Sarees</a>
-
-<a href="{{ url_for('category', name='women', type='saree', brand='fancysarees') }}">Fancy Sarees</a>
-
-<a href="{{ url_for('category', name='women', type='saree', brand='syntheticsarees') }}">Synthetic Sarees</a>
-   
-    </div>
-
-    <p><a href="{{ url_for('category', name='women', type='kurti') }}">Kurties</a></p>
-
-<p><a href="{{ url_for('category', name='women', type='legging') }}">Leggings</a></p>
-
-<p><a href="{{ url_for('category', name='women', type='chudidar') }}">Chudidars</a></p>
-
-<p><a href="{{ url_for('category', name='women', type='croptop') }}">Crop Tops</a></p>
-
-<p><a href="{{ url_for('category', name='women', type='innerwear') }}">InnerWear</a></p>
-
-<p><a href="{{ url_for('category', name='women', type='nighty') }}">Nighty</a></p>
-
-  </div>
-    <select id="sortSelect" onchange="sortProducts()">
-        <option value="">Sort</option>
-        <option value="low">Price: Low → High</option>
-        <option value="high">Price: High → Low</option>
-    </select>
-</div>
-{% endif %}
-
-
-<!-- ===== KIDS ===== -->
-{% if page == "kids" %}
-<div class="filter-section">
-  <h4 onclick="toggleSection('kidsBox')">Kids ▾</h4>
-
-  <div id="kidsBox" class="sub-box" style="display:block;">
-
-    <p onclick="toggleSection('boysBox')">Boys ▸</p>
-    <div id="boysBox" class="sub-box-inner">
-      <a href="{{ url_for('category', name='kids', type='boys', brand='partywear') }}">Party Wear</a>
-      <a href="{{ url_for('category', name='kids', type='boys', brand='nightdress') }}">Night Dress</a>
-    </div>
-
-    <p onclick="toggleSection('girlsBox')">Girls ▸</p>
-    <div id="girlsBox" class="sub-box-inner">
-      <a href="{{ url_for('category', name='kids', type='girls', brand='partywear') }}">Party Wear</a>
-      <a href="{{ url_for('category', name='kids', type='girls', brand='nightdress') }}">Night Dress</a>
-    </div>
-
-    <p>
-      <a href="{{ url_for('category', name='kids', type='babywear') }}">Baby Wear</a>
-    </p>
-
-  </div>
-</div>
-    <select id="sortSelect" onchange="sortProducts()">
-        <option value="">Sort</option>
-        <option value="low">Price: Low → High</option>
-        <option value="high">Price: High → Low</option>
-    </select>
-</div>
-{% endif %}
-
-
-
-
-
-
-
-
-
-
-
-</div>
-
-
-
-<!-- ================= PRODUCTS ================= -->
-<!-- ================= PRODUCTS ================= -->
-<div class="products">
-
-{% for p in products %}
-<div class="card" data-price="{{ p.price }}">
-
-    <a href="{{ url_for('product_page', pid=p.id) }}">
-        {% if p.image and p.image.startswith('http') %}
-            <img src="{{ p.image }}" class="product-img">
-        {% else %}
-           <img src="{{ p.image|imgsrc }}" class="product-img">
+        <!-- HOME -->
+        {% if page == "home" %}
+        <div class="filter-section">
+            <h4>Categories</h4>
+            <a href="/category/men">Men</a>
+            <a href="/category/women">Women</a>
+            <a href="/category/kids">Kids</a>
+        </div>
         {% endif %}
-    </a>
 
-    <h4>{{ p.name }}</h4>
-    <b>₹{{ p.price }}</b>
+        <!-- MEN -->
+        {% if page == "men" %}
+        <div class="filter-section">
+            <h4 onclick="toggleSection('menBox')">Men ▾</h4>
+
+            <div id="menBox" class="sub-box" style="display:block;">
+
+                <p onclick="toggleSection('shirtBox')">Shirts ▸</p>
+                <div id="shirtBox" class="sub-box-inner">
+                    <a href="/category/men?type=shirt&brand=ramraj">Ramraj</a>
+                    <a href="/category/men?type=shirt&brand=coolcolours">Coolcolours</a>
+                    <a href="/category/men?type=shirt&brand=whitehouse">White House</a>
+                    <a href="/category/men?type=shirt&brand=red_white">Red & White</a>
+                    <a href="/category/men?type=shirt&brand=oyemberg">Oyemberg</a>
+                </div>
+
+                <p><a href="/category/men?type=tshirt">T-Shirts</a></p>
+                <p><a href="/category/men?type=jeans">Jeans</a></p>
+                <p><a href="/category/men?type=Cottonpants">Cotton Pants</a></p>
+                <p><a href="/category/men?type=Nightwear">Night Wear</a></p>
+            </div>
+
+            <div class="sort-box">
+                <select id="sortSelect" onchange="sortProducts()">
+                    <option value="">Sort</option>
+                    <option value="low">Price: Low → High</option>
+                    <option value="high">Price: High → Low</option>
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- WOMEN -->
+        {% if page == "women" %}
+        <div class="filter-section">
+            <h4 onclick="toggleSection('womenBox')">Women ▾</h4>
+
+            <div id="womenBox" class="sub-box" style="display:block;">
+
+                <p onclick="toggleSection('sareeBox')">Sarees ▸</p>
+                <div id="sareeBox" class="sub-box-inner">
+                    <a href="{{ url_for('category', name='women', type='saree', brand='pattusarees') }}">Pattu Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='cottonsarees') }}">Cotton Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='fancysarees') }}">Fancy Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='syntheticsarees') }}">Synthetic Sarees</a>
+                </div>
+
+                <p><a href="{{ url_for('category', name='women', type='kurti') }}">Kurties</a></p>
+                <p><a href="{{ url_for('category', name='women', type='legging') }}">Leggings</a></p>
+                <p><a href="{{ url_for('category', name='women', type='chudidar') }}">Chudidars</a></p>
+                <p><a href="{{ url_for('category', name='women', type='croptop') }}">Crop Tops</a></p>
+                <p><a href="{{ url_for('category', name='women', type='innerwear') }}">InnerWear</a></p>
+                <p><a href="{{ url_for('category', name='women', type='nighty') }}">Nighty</a></p>
+            </div>
+
+            <div class="sort-box">
+                <select id="sortSelect" onchange="sortProducts()">
+                    <option value="">Sort</option>
+                    <option value="low">Price: Low → High</option>
+                    <option value="high">Price: High → Low</option>
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- KIDS -->
+        {% if page == "kids" %}
+        <div class="filter-section">
+            <h4 onclick="toggleSection('kidsBox')">Kids ▾</h4>
+
+            <div id="kidsBox" class="sub-box" style="display:block;">
+                <p onclick="toggleSection('boysBox')">Boys ▸</p>
+                <div id="boysBox" class="sub-box-inner">
+                    <a href="{{ url_for('category', name='kids', type='boys', brand='partywear') }}">Party Wear</a>
+                    <a href="{{ url_for('category', name='kids', type='boys', brand='nightdress') }}">Night Dress</a>
+                </div>
+
+                <p onclick="toggleSection('girlsBox')">Girls ▸</p>
+                <div id="girlsBox" class="sub-box-inner">
+                    <a href="{{ url_for('category', name='kids', type='girls', brand='partywear') }}">Party Wear</a>
+                    <a href="{{ url_for('category', name='kids', type='girls', brand='nightdress') }}">Night Dress</a>
+                </div>
+
+                <p><a href="{{ url_for('category', name='kids', type='babywear') }}">Baby Wear</a></p>
+            </div>
+
+            <div class="sort-box">
+                <select id="sortSelect" onchange="sortProducts()">
+                    <option value="">Sort</option>
+                    <option value="low">Price: Low → High</option>
+                    <option value="high">Price: High → Low</option>
+                </select>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="products">
+        {% for p in products %}
+        <div class="card" data-price="{{ p.price }}">
+            <a href="{{ url_for('product_page', pid=p.id) }}">
+                {% if p.image and p.image.startswith('http') %}
+                    <img src="{{ p.image }}" class="product-img">
+                {% else %}
+                    <img src="{{ p.image|imgsrc }}" class="product-img">
+                {% endif %}
+            </a>
+
+            <h4>{{ p.name }}</h4>
+            <b>₹{{ p.price }}</b>
+        </div>
+        {% endfor %}
+    </div>
 
 </div>
-{% endfor %}
 
-</div>
-
-</div>
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-
     const btn = document.querySelector(".filter-toggle");
     const box = document.getElementById("filterBox");
-    const topBar = document.querySelector(".shop-topbar"); // 🔥 ADD
+    const topBar = document.querySelector(".shop-topbar");
 
-    if(!btn){
-        alert("Button not found ❌");
+    if(btn && box){
+        btn.onclick = function(e){
+            if(window.innerWidth >= 992) return;
+
+            e.stopPropagation();
+            box.classList.toggle("active");
+
+            if(box.classList.contains("active")){
+                topBar.style.display = "none";
+            } else {
+                topBar.style.display = "flex";
+            }
+        };
+
+        document.onclick = function(e){
+            if(window.innerWidth >= 992) return;
+
+            if(box.classList.contains("active") && !box.contains(e.target) && !btn.contains(e.target)){
+                box.classList.remove("active");
+                topBar.style.display = "flex";
+            }
+        };
     }
-
-    if(!box){
-        alert("Filter box not found ❌");
-    }
-
-    // ✅ CLICK EVENT
-    btn.onclick = function(e){
-        e.stopPropagation();
-
-        box.classList.toggle("active");
-        console.log("clicked ✅");
-
-        // 🔥 TOP BAR HIDE/SHOW
-        if(box.classList.contains("active")){
-            topBar.style.display = "none";
-        } else {
-            topBar.style.display = "flex";
-        }
-    };
-
-    // ✅ OUTSIDE CLICK CLOSE
-    document.onclick = function(e){
-        if(box.classList.contains("active") && !box.contains(e.target) && !btn.contains(e.target)){
-            box.classList.remove("active");
-
-            // 🔥 BACK TO NORMAL
-            topBar.style.display = "flex";
-        }
-    };
-
 });
+
 function toggleSection(id){
     const box = document.getElementById(id);
 
@@ -407,22 +400,24 @@ function toggleSection(id){
         box.style.display = "block";
     }
 }
+
 function sortProducts(){
-    let select = document.getElementById("sortSelect").value;
+    let select = document.getElementById("sortSelect");
+    if(!select) return;
+
+    let value = select.value;
     let productsContainer = document.querySelector(".products");
     let products = Array.from(document.querySelectorAll(".card"));
 
     products.sort(function(a, b){
-        let priceA = parseFloat(a.getAttribute("data-price"));
-        let priceB = parseFloat(b.getAttribute("data-price"));
+        let priceA = parseFloat(a.getAttribute("data-price")) || 0;
+        let priceB = parseFloat(b.getAttribute("data-price")) || 0;
 
-        if(select === "low"){
+        if(value === "low"){
             return priceA - priceB;
-        }
-        else if(select === "high"){
+        } else if(value === "high"){
             return priceB - priceA;
-        }
-        else{
+        } else {
             return 0;
         }
     });
@@ -432,6 +427,7 @@ function sortProducts(){
     });
 }
 </script>
+
 {% include "footer.html" %}
 
 </body>
