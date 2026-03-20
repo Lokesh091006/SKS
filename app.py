@@ -1537,10 +1537,11 @@ def tracking_webhook():
     print("WEBHOOK DATA:", data)
 
     try:
-        payload = data.get("data", {}) if data else {}
+        if not data:
+            return "OK", 200
 
-        order_id = payload.get("order_id")
-        status = payload.get("current_status")
+        order_id = data.get("order_id")
+        status = data.get("current_status")
 
         order = Order.query.filter_by(order_id=order_id).first()
 
@@ -1555,9 +1556,13 @@ def tracking_webhook():
                 order.status = "SHIPPED"
             elif "CANCELLED" in status_upper:
                 order.status = "CANCELLED"
+            elif "OUT FOR PICKUP" in status_upper or "PICKUP" in status_upper:
+                order.status = "PICKUP PENDING"
 
             db.session.commit()
             print("STATUS UPDATED:", order.order_id, order.status)
+        else:
+            print("ORDER NOT FOUND OR STATUS MISSING:", order_id, status)
 
     except Exception as e:
         print("WEBHOOK ERROR:", e)
