@@ -1,6 +1,7 @@
 import random,re,time,requests,os
 import cloudinary
 import cloudinary.uploader
+import cloudinary.utils
 import razorpay
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
@@ -22,6 +23,12 @@ load_dotenv()
 
 
 app = Flask(__name__)
+
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "heic", "heif"}
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -1288,6 +1295,7 @@ def admin_dashboard():
         total_users=total_users
 )
 
+
 @app.route("/admin/add-product", methods=["GET", "POST"])
 @role_required("admin")
 def add_product():
@@ -1304,27 +1312,70 @@ def add_product():
             brand = request.form.get("brand")
             description = request.form.get("description")
 
-            img1 = request.files["image1"]
+            img1 = request.files.get("image1")
             img2 = request.files.get("image2")
             img3 = request.files.get("image3")
+
+            print("IMG1 NAME:", img1.filename if img1 else "NO FILE")
+            print("IMG2 NAME:", img2.filename if img2 else "NO FILE")
+            print("IMG3 NAME:", img3.filename if img3 else "NO FILE")
 
             # ===== IMAGE 1 (Required) =====
             img1_path = None
             if img1 and img1.filename != "":
-                upload_result1 = cloudinary.uploader.upload(img1, folder="kalasilks/products")
-                img1_path = upload_result1["secure_url"]
+                upload_result1 = cloudinary.uploader.upload(
+                    img1,
+                    folder="kalasilks/products",
+                    resource_type="image"
+                )
+                print("UPLOAD RESULT 1:", upload_result1)
+
+                public_id1 = upload_result1["public_id"]
+
+                img1_path = cloudinary.CloudinaryImage(public_id1).build_url(
+                    secure=True,
+                    format="jpg"
+                )
+
+                print("FINAL IMG1 URL:", img1_path)
 
             # ===== IMAGE 2 (Optional) =====
             img2_path = None
             if img2 and img2.filename != "":
-                upload_result2 = cloudinary.uploader.upload(img2, folder="kalasilks/products")
-                img2_path = upload_result2["secure_url"]
+                upload_result2 = cloudinary.uploader.upload(
+                    img2,
+                    folder="kalasilks/products",
+                    resource_type="image"
+                )
+                print("UPLOAD RESULT 2:", upload_result2)
+
+                public_id2 = upload_result2["public_id"]
+
+                img2_path = cloudinary.CloudinaryImage(public_id2).build_url(
+                    secure=True,
+                    format="jpg"
+                )
+
+                print("FINAL IMG2 URL:", img2_path)
 
             # ===== IMAGE 3 (Optional) =====
             img3_path = None
             if img3 and img3.filename != "":
-                upload_result3 = cloudinary.uploader.upload(img3, folder="kalasilks/products")
-                img3_path = upload_result3["secure_url"]
+                upload_result3 = cloudinary.uploader.upload(
+                    img3,
+                    folder="kalasilks/products",
+                    resource_type="image"
+                )
+                print("UPLOAD RESULT 3:", upload_result3)
+
+                public_id3 = upload_result3["public_id"]
+
+                img3_path = cloudinary.CloudinaryImage(public_id3).build_url(
+                    secure=True,
+                    format="jpg"
+                )
+
+                print("FINAL IMG3 URL:", img3_path)
 
             # ===== SAVE PRODUCT =====
             new_product = Product(
