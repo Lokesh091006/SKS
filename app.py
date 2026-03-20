@@ -1495,6 +1495,18 @@ def edit_product(id):
     )
     
 
+@app.route("/admin/orders")
+@role_required("admin")
+def admin_orders():
+    orders = Order.query.options(
+        joinedload(Order.product),
+        joinedload(Order.address)
+    ).order_by(Order.id.desc()).all()
+
+    print("ADMIN ORDERS:", orders)
+
+    return render_template("admin/orders.html", orders=orders)
+
 
 
 @app.route("/payment", methods=["GET", "POST"])
