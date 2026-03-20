@@ -1533,9 +1533,36 @@ def payment():
 
 @app.route("/tracking-webhook", methods=["POST"])
 def tracking_webhook():
-    print("WEBHOOK HIT")
-    return "OK", 200
+    data = request.get_json(silent=True)
+    print("WEBHOOK DATA:", data)
 
+    try:
+        payload = data.get("data", {}) if data else {}
+
+        order_id = payload.get("order_id")
+        status = payload.get("current_status")
+
+        order = Order.query.filter_by(order_id=order_id).first()
+
+        if order and status:
+            status_upper = status.upper()
+
+            if "DELIVERED" in status_upper:
+                order.status = "DELIVERED"
+            elif "OUT FOR DELIVERY" in status_upper:
+                order.status = "OUT FOR DELIVERY"
+            elif "SHIPPED" in status_upper or "IN TRANSIT" in status_upper:
+                order.status = "SHIPPED"
+            elif "CANCELLED" in status_upper:
+                order.status = "CANCELLED"
+
+            db.session.commit()
+            print("STATUS UPDATED:", order.order_id, order.status)
+
+    except Exception as e:
+        print("WEBHOOK ERROR:", e)
+
+    return "OK", 200
 
 @app.route("/razorpay-checkout")
 def razorpay_checkout():
