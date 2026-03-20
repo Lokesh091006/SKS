@@ -1531,17 +1531,10 @@ def payment():
 
     return render_template("payment.html", total_after_coupon=total_after_coupon)
 
-@app.route("/shiprocket-webhook", methods=["POST"])
-def shiprocket_webhook():
-    try:
-        data = request.get_json(silent=True)
-        print("SHIPROCKET WEBHOOK HIT")
-        print("SHIPROCKET WEBHOOK DATA:", data)
-        return "OK", 200
-    except Exception as e:
-        print("WEBHOOK ERROR:", e)
-        return "ERROR", 500
-
+@app.route("/tracking-webhook", methods=["POST"])
+def tracking_webhook():
+    print("WEBHOOK HIT")
+    return "OK", 200
 
 
 @app.route("/razorpay-checkout")
