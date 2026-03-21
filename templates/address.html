@@ -24,6 +24,25 @@
             margin-bottom: 20px;
         }
 
+        .summary-box {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .summary-box h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #ff3f6c;
+        }
+
+        .summary-line {
+            margin: 6px 0;
+            font-size: 14px;
+        }
+
         /* ADDRESS CARD */
         .address-card {
             background: #fff;
@@ -99,9 +118,29 @@
 
     <h2>📍 Select Delivery Address</h2>
 
+    {% if buy_now %}
+    <div class="summary-box">
+        <h3>Order Summary</h3>
+        <div class="summary-line"><b>Product:</b> {{ buy_product.name }}</div>
+        <div class="summary-line"><b>Size:</b> {{ buy_size }}</div>
+        <div class="summary-line"><b>Quantity:</b> {{ buy_qty }}</div>
+        <div class="summary-line"><b>Total Amount:</b> ₹{{ final_amount }}</div>
+    </div>
+    {% else %}
+    <div class="summary-box">
+        <h3>Cart Summary</h3>
+        {% for item in cart_items %}
+            <div class="summary-line">
+                {{ item.product.name }} - Size: {{ item.size }} - Qty: {{ item.qty }} - ₹{{ item.subtotal }}
+            </div>
+        {% endfor %}
+        <div class="summary-line"><b>Total Amount:</b> ₹{{ final_amount }}</div>
+    </div>
+    {% endif %}
+
     <!-- ADD NEW ADDRESS -->
     <a href="/add-address">
-        <button class="btn add-btn">➕ Add New Address</button>
+        <button class="btn add-btn" type="button">➕ Add New Address</button>
     </a>
 
     {% if addresses %}
@@ -113,31 +152,31 @@
             <label>
                 <input type="radio" name="address_id" value="{{ addr.id }}" required>
 
-               <div class="address-details">
-  <b>{{ addr.name }}</b><br>
-  📞 {{ addr.mobile }}<br>
+                <div class="address-details">
+                    <b>{{ addr.name }}</b><br>
+                    📞 {{ addr.mobile }}<br>
 
-  {% if addr.email %}
-    ✉️ {{ addr.email }}<br>
-  {% endif %}
+                    {% if addr.email %}
+                        ✉️ {{ addr.email }}<br>
+                    {% endif %}
 
-  {{ addr.house }}, {{ addr.street }}<br>
-  {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
-</div>
+                    {{ addr.house }}, {{ addr.street }}<br>
+                    {{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}
+                </div>
             </label>
 
             <div class="address-actions">
-    <span></span>
+                <span></span>
 
-    <button type="submit"
-            class="delete-btn"
-            style="background:none;border:none;color:red;cursor:pointer;"
-            formaction="/delete-address/{{ addr.id }}"
-            formmethod="post"
-            onclick="return confirm('Delete this address?')">
-        Delete
-    </button>
-</div>
+                <button type="submit"
+                        class="delete-btn"
+                        style="background:none;border:none;color:red;cursor:pointer;"
+                        formaction="/delete-address/{{ addr.id }}"
+                        formmethod="get"
+                        onclick="return confirm('Delete this address?')">
+                    Delete
+                </button>
+            </div>
         </div>
         {% endfor %}
 

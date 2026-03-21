@@ -4,7 +4,6 @@
   <title>Admin Orders</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -19,7 +18,6 @@
       color: #333;
     }
 
-    /* TOP BAR */
     .topbar {
       display: flex;
       justify-content: space-between;
@@ -33,7 +31,6 @@
       color: #ff3f6c;
     }
 
-    /* CARD */
     .order-card {
       background: white;
       border-radius: 16px;
@@ -51,9 +48,10 @@
     .row {
       margin: 6px 0;
       font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
     }
 
-    /* STATUS BADGES */
     .status {
       display: inline-block;
       padding: 6px 12px;
@@ -70,7 +68,6 @@
     .cancelled { background: #dc3545; }
     .pickup-pending { background: #ff3f6c; }
 
-    /* IMAGE */
     img {
       width: 70px;
       height: 70px;
@@ -79,20 +76,17 @@
       margin-top: 10px;
     }
 
-    /* GRID */
     .order-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 15px;
     }
 
-    /* EXTRA INFO */
     .label {
       color: #777;
       font-weight: 500;
     }
 
-    /* TRACK BUTTON */
     .track-btn {
       display: inline-block;
       margin-top: 10px;
@@ -102,111 +96,165 @@
       border-radius: 8px;
       text-decoration: none;
       font-size: 13px;
+      border: none;
     }
 
     .track-btn:hover {
       background: #e6335f;
     }
 
+    .sync-btn {
+      background: #333;
+      margin-top: 10px;
+    }
+
+    .sync-btn:hover {
+      background: #111;
+    }
+
+    .address-box {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 10px;
+      border: 1px solid #eee;
+    }
+
+    .sr-box {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f9f9ff;
+      border-radius: 10px;
+      border: 1px solid #ececff;
+    }
   </style>
 </head>
 
 <body>
 
-<div class="topbar">
-  <a href="/admin/dashboard">⬅ Back</a>
-  <h2>📦 Admin Orders</h2>
-  <a href="/">🏠 Home</a>
-</div>
-
-{% if orders %}
-
-<div class="order-grid">
-
-{% for order in orders %}
-<div class="order-card">
-
-  <div class="row">
-    <strong>Order ID:</strong> {{ order.order_id }}
+  <div class="topbar">
+    <a href="/admin/dashboard">⬅ Back</a>
+    <h2>📦 Admin Orders</h2>
+    <a href="/">🏠 Home</a>
   </div>
 
-  <div class="row">
-    <strong>Status:</strong>
+  {% if orders %}
+    <div class="order-grid">
 
-    {% if order.status == "PLACED" %}
-      <span class="status placed">PLACED</span>
+      {% for order in orders %}
+        <div class="order-card">
 
-    {% elif order.status == "SHIPPED" %}
-      <span class="status shipped">SHIPPED</span>
+          <div class="row">
+            <strong>Order ID:</strong> {{ order.order_id }}
+          </div>
 
-    {% elif order.status == "OUT FOR DELIVERY" %}
-      <span class="status out-for-delivery">OUT FOR DELIVERY</span>
+          <div class="row">
+            <strong>Status:</strong>
 
-    {% elif order.status == "DELIVERED" %}
-      <span class="status delivered">DELIVERED</span>
+            {% if order.status == "PLACED" %}
+              <span class="status placed">PLACED</span>
+            {% elif order.status == "SHIPPED" %}
+              <span class="status shipped">SHIPPED</span>
+            {% elif order.status == "OUT FOR DELIVERY" %}
+              <span class="status out-for-delivery">OUT FOR DELIVERY</span>
+            {% elif order.status == "DELIVERED" %}
+              <span class="status delivered">DELIVERED</span>
+            {% elif order.status == "CANCELLED" %}
+              <span class="status cancelled">CANCELLED</span>
+            {% elif order.status == "PICKUP PENDING" %}
+              <span class="status pickup-pending">PICKUP PENDING</span>
+            {% else %}
+              <span class="status placed">{{ order.status }}</span>
+            {% endif %}
+          </div>
 
-    {% elif order.status == "CANCELLED" %}
-      <span class="status cancelled">CANCELLED</span>
+          <div class="row">
+            <span class="label">Payment:</span> {{ order.payment_method }}
+          </div>
 
-    {% elif order.status == "PICKUP PENDING" %}
-      <span class="status pickup-pending">PICKUP PENDING</span>
+          <div class="row">
+            <span class="label">Size:</span> {{ order.size or "-" }}
+          </div>
 
-    {% else %}
-      <span class="status placed">{{ order.status }}</span>
-    {% endif %}
-  </div>
+          {% if order.product %}
+            <div class="row"><strong>{{ order.product.name }}</strong></div>
+            <div class="row">₹{{ order.product.price }}</div>
 
-  <div class="row">
-    <span class="label">Payment:</span> {{ order.payment_method }}
-  </div>
+            {% if order.product.image %}
+              <img src="{{ order.product.image }}">
+            {% endif %}
+          {% endif %}
 
-  <div class="row">
-    <span class="label">Size:</span> {{ order.size or "-" }}
-  </div>
+          {% if order.address %}
+            <div class="address-box">
+              <div class="row"><strong>{{ order.address.name or "-" }}</strong></div>
+              <div class="row"><span class="label">Mobile:</span> {{ order.address.mobile or "-" }}</div>
+              <div class="row"><span class="label">Email:</span> {{ order.address.email or "-" }}</div>
+              <div class="row"><span class="label">House:</span> {{ order.address.house or "-" }}</div>
+              <div class="row"><span class="label">Street:</span> {{ order.address.street or "-" }}</div>
+              <div class="row">
+                <span class="label">Location:</span>
+                {{ order.address.city or "-" }},
+                {{ order.address.state or "-" }} - {{ order.address.pincode or "-" }}
+              </div>
+            </div>
+          {% endif %}
 
-  {% if order.product %}
-    <div class="row"><strong>{{ order.product.name }}</strong></div>
-    <div class="row">₹{{ order.product.price }}</div>
+          {% if order.shiprocket_order_id or order.shiprocket_shipment_id or order.shiprocket_status %}
+            <div class="sr-box">
+              {% if order.shiprocket_order_id %}
+                <div class="row">
+                  <span class="label">SR Order ID:</span> {{ order.shiprocket_order_id }}
+                </div>
+              {% endif %}
 
-    {% if order.product.image %}
-      <img src="{{ order.product.image }}">
-    {% endif %}
-  {% endif %}
+              {% if order.shiprocket_shipment_id %}
+                <div class="row">
+                  <span class="label">Shipment ID:</span> {{ order.shiprocket_shipment_id }}
+                </div>
+              {% endif %}
 
-  {% if order.address %}
-    <div class="row"><strong>{{ order.address.name }}</strong></div>
-    <div class="row">{{ order.address.mobile }}</div>
-    <div class="row">
-      {{ order.address.city }}, {{ order.address.state }} - {{ order.address.pincode }}
+              {% if order.shiprocket_status %}
+                <div class="row">
+                  <span class="label">SR Status:</span> {{ order.shiprocket_status }}
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if order.awb_code %}
+            <div class="row">
+              <span class="label">AWB:</span> {{ order.awb_code }}
+            </div>
+          {% endif %}
+
+          {% if order.courier_name %}
+            <div class="row">
+              <span class="label">Courier:</span> {{ order.courier_name }}
+            </div>
+          {% endif %}
+
+          {% if order.tracking_url %}
+            <a href="{{ order.tracking_url }}" target="_blank" class="track-btn">
+              📍 Track Shipment
+            </a>
+          {% elif order.awb_code %}
+            <a href="https://shiprocket.co/tracking/{{ order.awb_code }}" target="_blank" class="track-btn">
+              📍 Track Shipment
+            </a>
+          {% endif %}
+
+          <a href="/admin/sync-shiprocket/{{ order.id }}" class="track-btn sync-btn">
+            🔄 Sync Shiprocket
+          </a>
+
+        </div>
+      {% endfor %}
+
     </div>
+  {% else %}
+    <p style="text-align:center;">No orders found.</p>
   {% endif %}
-
-  {% if order.awb_code %}
-    <div class="row">
-      <span class="label">AWB:</span> {{ order.awb_code }}
-    </div>
-  {% endif %}
-
-  {% if order.courier_name %}
-    <div class="row">
-      <span class="label">Courier:</span> {{ order.courier_name }}
-    </div>
-  {% endif %}
-
-  {% if order.tracking_url %}
-    <a href="{{ order.tracking_url }}" target="_blank" class="track-btn">
-      📍 Track Shipment
-    </a>
-  {% endif %}
-
-</div>
-{% endfor %}
-
-</div>
-
-{% else %}
-  <p style="text-align:center;">No orders found.</p>
-{% endif %}
 
 </body>
 </html>

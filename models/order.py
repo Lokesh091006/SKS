@@ -13,7 +13,7 @@ class Order(db.Model):
     address_id = db.Column(db.Integer, db.ForeignKey("address.id"), nullable=False)
 
     payment_method = db.Column(db.String(20), nullable=False)
-    status = db.Column(db.String(20), default="Placed")
+    status = db.Column(db.String(20), default="PLACED")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ✅ NEW FIELD

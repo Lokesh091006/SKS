@@ -551,6 +551,13 @@ def login():
 
         session["user_id"] = user.id
         session["role"] = user.role
+        session["username"] = user.username
+
+        next_page = session.pop("next", None)
+        if next_page:
+
+
+            return redirect(next_page)
 
         return redirect("/")
 
@@ -757,6 +764,13 @@ def set_username():
                 send_welcome_email(user)
         except Exception as e:
             print("Welcome email failed:", e)
+
+        next_page = session.pop("next", None)
+        if next_page:
+
+
+
+            return redirect(next_page)
 
         return redirect(url_for("home"))
 
@@ -986,22 +1000,19 @@ def cart():
     total = 0
 
     for key, item in cart.items():
-        # ⚡ split key into product_id and size if needed
         if "_" in key:
-            pid, size = key.split("_")
+            pid, size = key.split("_", 1)
         else:
             pid = key
-            # old items without size
             if isinstance(item, dict):
-                size = item.get("size", "M")
+                size = item.get("size")
             else:
-                size = "M"
+                size = None
 
         product = Product.query.filter_by(id=int(pid), is_active=True).first()
         if not product:
             continue
 
-        # qty
         if isinstance(item, dict):
             qty = item.get("qty", 1)
         else:
@@ -1017,24 +1028,16 @@ def cart():
             "subtotal": subtotal
         })
 
-    # discount logic
-    discount = 0
-    if total > 3000:
-        discount = 600
-    elif total > 2000:
-        discount = 300
-    elif total > 1000:
-        discount = 100
-
-    final_amount = total - discount
+    final_amount = total
     session["total_after_coupon"] = final_amount
 
-    return render_template("cart.html",
-                           cart_items=cart_items,
-                           total=total,
-                           discount=discount,
-                           final_amount=final_amount)
-
+    return render_template(
+        "cart.html",
+        cart_items=cart_items,
+        total=total,
+        discount=0,
+        final_amount=final_amount
+    )
 
 @app.route("/clear")
 def clear_cart():
@@ -1047,56 +1050,105 @@ def clear_cart():
 
 @app.route("/add/<int:product_id>")
 def add_to_cart(product_id):
-
     cart = session.get("cart", {})
     pid = str(product_id)
 
-    size = request.args.get("size")
+    size = (request.args.get("size") or "").strip()
+    qty = int(request.args.get("qty", 1))
+
     product = Product.query.filter_by(id=product_id, is_active=True).first()
     if not product:
-
-
         flash("This product is unavailable ❌", "error")
         return redirect(request.referrer or "/")
 
-    # ❌ size lekapothe block
-    if not size:
+    all_sizes = ProductSize.query.filter_by(product_id=product_id).all()
+    has_real_sizes = any((s.size or "").strip() for s in all_sizes)
+
+    # size compulsory only if product really has sizes
+    if has_real_sizes and not size:
         flash("Please select a size before adding to cart!", "error")
         return redirect(request.referrer or "/")
 
-    # 🔥 STEP 9 START (STOCK CHECK)
-    size_item = ProductSize.query.filter_by(
-        product_id=product_id,
-        size=size
-    ).first()
+    size_item = None
 
-    if not size_item or size_item.stock <= 0:
-        flash("Out of stock ❌", "error")
-        return redirect(request.referrer or "/")
-    # 🔥 STEP 9 END
+    if has_real_sizes:
+        size_item = ProductSize.query.filter_by(
+            product_id=product_id,
+            size=size
+        ).first()
 
-    # cart key
-    cart_key = f"{pid}_{size}"
+        if not size_item or size_item.stock <= 0:
+            flash("Out of stock ❌", "error")
+            return redirect(request.referrer or "/")
 
-    # already exists
+        if qty > size_item.stock:
+            flash(f"Only {size_item.stock} item(s) available ⚠️", "error")
+            return redirect(request.referrer or "/")
+
+    cart_key = f"{pid}_{size}" if size else pid
+
     if cart_key in cart:
+        current_qty = cart[cart_key].get("qty", 1)
 
-        # 🔥 check if adding exceeds stock
-        if cart[cart_key]["qty"] >= size_item.stock:
+        if has_real_sizes and current_qty + qty > size_item.stock:
             flash("Maximum stock reached ⚠️", "error")
             return redirect(request.referrer or "/")
 
-        cart[cart_key]["qty"] += 1
-
+        cart[cart_key]["qty"] = current_qty + qty
     else:
-        cart[cart_key] = {"qty": 1, "size": size}
+        cart[cart_key] = {
+            "qty": qty,
+            "size": size if size else None
+        }
 
     session["cart"] = cart
 
     flash("Product added to cart ✅", "success")
     return redirect(url_for("cart"))
 
+@app.route("/buy-now/<int:product_id>")
+def buy_now(product_id):
+    product = Product.query.filter_by(id=product_id, is_active=True).first()
+    if not product:
+        flash("This product is unavailable ❌", "error")
+        return redirect(url_for("home"))
 
+    size = (request.args.get("size") or "").strip()
+    qty = int(request.args.get("qty", 1))
+
+    all_sizes = ProductSize.query.filter_by(product_id=product_id).all()
+    has_real_sizes = any((s.size or "").strip() for s in all_sizes)
+
+    if has_real_sizes and not size:
+        flash("Please select a size first ❌", "error")
+        return redirect(url_for("product_page", pid=product_id))
+
+    if has_real_sizes:
+        size_obj = ProductSize.query.filter_by(
+            product_id=product_id,
+            size=size
+        ).first()
+
+        if not size_obj or size_obj.stock <= 0:
+            flash("Selected size is out of stock ❌", "error")
+            return redirect(url_for("product_page", pid=product_id))
+
+        if qty > size_obj.stock:
+            flash(f"Only {size_obj.stock} item(s) available for size {size} ⚠️", "error")
+            return redirect(url_for("product_page", pid=product_id))
+
+    session["buy_now_item"] = {
+        "product_id": product_id,
+        "size": size if size else None,
+        "qty": qty
+    }
+
+    if "user_id" not in session:
+        session["next"] = url_for("address")
+        flash("Login to proceed", "error")
+        return redirect(url_for("login"))
+
+    return redirect(url_for("address"))
 
 
 @app.route("/increase/<int:product_id>/<size>")
@@ -1130,16 +1182,94 @@ def decrease(product_id, size):
 def address():
     if "user_id" not in session:
         session["show_login"] = True
-        return redirect(url_for("cart"))
+        session["next"] = url_for("address")
+        flash("Login to proceed", "error")
+        return redirect(url_for("login"))
 
     user_id = session["user_id"]
+    buy_now_item = session.get("buy_now_item")
+    cart = session.get("cart", {})
+
     if request.method == "POST":
         addr = Address.query.get(request.form["address_id"])
+        if not addr or addr.user_id != user_id:
+            flash("Invalid address selected ❌", "error")
+            return redirect(url_for("address"))
+
         session["address"] = addr.id
         return redirect(url_for("payment"))
 
     addresses = Address.query.filter_by(user_id=user_id).all()
-    return render_template("address.html", addresses=addresses)
+
+    # BUY NOW FLOW
+    if buy_now_item:
+        product = Product.query.filter_by(
+            id=buy_now_item["product_id"],
+            is_active=True
+        ).first()
+
+        if not product:
+            session.pop("buy_now_item", None)
+            flash("Product not found ❌", "error")
+            return redirect(url_for("home"))
+
+        qty = int(buy_now_item.get("qty", 1))
+        size = buy_now_item.get("size")
+        total = product.price * qty
+
+        session["total_after_coupon"] = total
+
+        return render_template(
+            "address.html",
+            addresses=addresses,
+            buy_now=True,
+            buy_product=product,
+            buy_size=size,
+            buy_qty=qty,
+            total=total,
+            final_amount=total
+        )
+
+    # NORMAL CART FLOW
+    if not cart:
+        flash("Your cart is empty", "error")
+        return redirect(url_for("cart"))
+
+    cart_items = []
+    total = 0
+
+    for key, item in cart.items():
+        if "_" in key:
+            pid, size = key.split("_", 1)
+        else:
+            pid = key
+            size = item.get("size", "M") if isinstance(item, dict) else "M"
+
+        product = Product.query.filter_by(id=int(pid), is_active=True).first()
+        if not product:
+            continue
+
+        qty = item.get("qty", 1) if isinstance(item, dict) else item
+        subtotal = product.price * qty
+        total += subtotal
+
+        cart_items.append({
+            "product": product,
+            "qty": qty,
+            "size": size,
+            "subtotal": subtotal
+        })
+
+    session["total_after_coupon"] = total
+
+    return render_template(
+        "address.html",
+        addresses=addresses,
+        buy_now=False,
+        cart_items=cart_items,
+        total=total,
+        final_amount=total
+    )
 
 
 
@@ -1505,20 +1635,109 @@ def admin_orders():
     return render_template("admin/orders.html", orders=orders)
 
 
+@app.route("/admin/sync-shiprocket/<int:order_db_id>")
+@role_required("admin")
+def sync_shiprocket_order(order_db_id):
+    order = Order.query.get_or_404(order_db_id)
+
+    if not order.shiprocket_order_id:
+        flash("Shiprocket order id not found for this order ❌", "danger")
+        return redirect("/admin/orders")
+
+    token = get_shiprocket_token()
+    if not token:
+        flash("Shiprocket token failed ❌", "danger")
+        return redirect("/admin/orders")
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        url = f"https://apiv2.shiprocket.in/v1/external/orders/show/{order.shiprocket_order_id}"
+        r = requests.get(url, headers=headers, timeout=30)
+        print("SHIPROCKET SHOW ORDER:", r.status_code, r.text)
+        r.raise_for_status()
+
+        data = r.json()
+        main = data.get("data", {}) if isinstance(data, dict) else {}
+        shipments = main.get("shipments", []) or main.get("shipment_details", [])
+
+        awb_code = None
+        courier_name = None
+        tracking_url = None
+        shipment_id = None
+        shiprocket_status = None
+
+        if shipments and isinstance(shipments, list):
+            first = shipments[0]
+            shipment_id = first.get("id") or first.get("shipment_id")
+            awb_code = first.get("awb") or first.get("awb_code")
+            courier_name = first.get("courier_name") or first.get("courier")
+            tracking_url = first.get("tracking_url")
+            shiprocket_status = first.get("status") or first.get("current_status")
+
+        shipment_id = shipment_id or main.get("shipment_id")
+        awb_code = awb_code or main.get("awb_code")
+        courier_name = courier_name or main.get("courier_name")
+        tracking_url = tracking_url or main.get("tracking_url")
+        shiprocket_status = shiprocket_status or main.get("status")
+
+        if shipment_id:
+            order.shiprocket_shipment_id = str(shipment_id)
+
+        if awb_code:
+            order.awb_code = str(awb_code)
+
+        if courier_name:
+            order.courier_name = courier_name
+
+        if tracking_url:
+            order.tracking_url = tracking_url
+
+        if shiprocket_status:
+            order.shiprocket_status = shiprocket_status
+
+            s = shiprocket_status.upper()
+            if "DELIVERED" in s:
+                order.status = "DELIVERED"
+            elif "OUT FOR DELIVERY" in s:
+                order.status = "OUT FOR DELIVERY"
+            elif "SHIPPED" in s or "IN TRANSIT" in s:
+                order.status = "SHIPPED"
+            elif "CANCELLED" in s:
+                order.status = "CANCELLED"
+            elif "PICKUP" in s:
+                order.status = "PICKUP PENDING"
+
+        db.session.commit()
+        flash("Shiprocket details synced successfully ✅", "success")
+
+    except Exception as e:
+        print("SYNC SHIPROCKET ERROR:", e)
+        flash(f"Sync failed: {e}", "danger")
+
+    return redirect("/admin/orders")
+
+
 
 @app.route("/payment", methods=["GET", "POST"])
 def payment():
-    total_after_coupon = session.get("total_after_coupon") or 0
-
     if "user_id" not in session:
         return redirect("/login")
+
+    total_after_coupon = session.get("total_after_coupon")
+
+    if total_after_coupon is None:
+        return redirect(url_for("address"))
 
     if request.method == "POST":
         method = request.form.get("method")
 
         if method == "cod":
             session["payment_method"] = "cod"
-            session["final_amount"] = total_after_coupon + 30
+            session["final_amount"] = total_after_coupon
             return redirect(url_for("payment_success"))
 
         elif method == "online":
@@ -1538,9 +1757,10 @@ def tracking_webhook():
             return "OK", 200
 
         order_id = data.get("order_id")
-        status = data.get("current_status")
-        awb = data.get("awb")
-        courier = data.get("courier_name")
+        status = data.get("current_status") or data.get("status") or ""
+        awb = data.get("awb") or data.get("awb_code")
+        courier = data.get("courier_name") or data.get("courier")
+        tracking_url = data.get("tracking_url")
 
         order = Order.query.filter_by(order_id=order_id).first()
 
@@ -1548,65 +1768,38 @@ def tracking_webhook():
             print("ORDER NOT FOUND:", order_id)
             return "OK", 200
 
-        # ✅ CORRECT FIELD NAMES
-        order.awb_code = awb
-        order.courier_name = courier
+        if awb:
+            order.awb_code = str(awb)
 
-        # status update
-        status_upper = status.upper()
+        if courier:
+            order.courier_name = courier
 
-        if "DELIVERED" in status_upper:
-            order.status = "DELIVERED"
-        elif "OUT FOR DELIVERY" in status_upper:
-            order.status = "OUT FOR DELIVERY"
-        elif "SHIPPED" in status_upper or "IN TRANSIT" in status_upper:
-            order.status = "SHIPPED"
-        elif "CANCELLED" in status_upper:
-            order.status = "CANCELLED"
-        elif "PICKUP" in status_upper:
-            order.status = "PICKUP PENDING"
+        if tracking_url:
+            order.tracking_url = tracking_url
+
+        if status:
+            order.shiprocket_status = status
+
+            status_upper = status.upper()
+
+            if "DELIVERED" in status_upper:
+                order.status = "DELIVERED"
+            elif "OUT FOR DELIVERY" in status_upper:
+                order.status = "OUT FOR DELIVERY"
+            elif "SHIPPED" in status_upper or "IN TRANSIT" in status_upper:
+                order.status = "SHIPPED"
+            elif "CANCELLED" in status_upper:
+                order.status = "CANCELLED"
+            elif "PICKUP" in status_upper:
+                order.status = "PICKUP PENDING"
 
         db.session.commit()
-        print("UPDATED:", order.order_id, order.status)
+        print("UPDATED:", order.order_id, order.status, order.awb_code, order.courier_name, order.tracking_url)
 
     except Exception as e:
         print("WEBHOOK ERROR:", e)
 
     return "OK", 200
-
-@app.route("/razorpay-checkout")
-def razorpay_checkout():
-    if "user_id" not in session:
-        return redirect("/login")
-
-    amount = session.get("final_amount")
-    address_id = session.get("address")
-
-    if not amount:
-        return redirect("/cart")
-
-    if not address_id:
-        return redirect("/address")
-
-    amount_paise = int(float(amount) * 100)
-
-    razorpay_order = client.order.create({
-        "amount": amount_paise,
-        "currency": "INR",
-        "payment_capture": 1
-    })
-
-    session["razorpay_order_id"] = razorpay_order["id"]
-
-    user = User.query.get(session["user_id"])
-
-    return render_template(
-        "razorpay_checkout.html",
-        razorpay_key=os.getenv("RAZORPAY_KEY_ID"),
-        amount=amount_paise,
-        order_id=razorpay_order["id"],
-        user=user
-    )
 
 @app.route("/razorpay-verify", methods=["POST"])
 def razorpay_verify():
@@ -1686,68 +1879,102 @@ def payment_success():
         return redirect("/login")
 
     cart = session.get("cart", {})
+    buy_now_item = session.get("buy_now_item")
     address_id = session.get("address")
     payment_method = session.get("payment_method")
 
-    if not cart:
-        return redirect("/cart")
-
     if not address_id or not payment_method:
-        return redirect("/checkout")
+        return redirect(url_for("address"))
 
     created_ids = []
-    cart_items = build_cart_items_from_session(cart)
+    cart_items = []
 
-    # 1) STOCK CHECK + ORDER CREATE
-    for item in cart_items:
-        product = item["product"]
-        qty = item["qty"]
-        size = item["size"]
+    # ---------------- BUY NOW FLOW ----------------
+    if buy_now_item:
+        product = Product.query.filter_by(
+            id=buy_now_item["product_id"],
+            is_active=True
+        ).first()
 
-        if size:
-            size_obj = ProductSize.query.filter_by(
-                product_id=product.id,
-                size=size
-            ).first()
+        if not product:
+            session.pop("buy_now_item", None)
+            flash("Product not found ❌", "error")
+            return redirect(url_for("home"))
 
-            if not size_obj or size_obj.stock < qty:
-                flash(f"{size} size is out of stock ❌", "error")
-                return redirect("/cart")
+        qty = int(buy_now_item.get("qty", 1))
+        size = buy_now_item.get("size")
 
-            size_obj.stock -= qty
-            update_product_visibility(product.id)
+        cart_items = [{
+            "product": product,
+            "qty": qty,
+            "size": size
+        }]
 
-        for _ in range(qty):
-            order = Order(
-                order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
-                user_id=session["user_id"],
-                product_id=product.id,
-                address_id=address_id,
-                payment_method=payment_method,
-                status="PLACED",
-                size=size,
-                payment_id=session.get("razorpay_payment_id")
-            )
-            db.session.add(order)
-            db.session.flush()
-            created_ids.append(order.id)
-            time.sleep(0.001)  # unique order_id kosam tiny delay
+    # ---------------- NORMAL CART FLOW ----------------
+    else:
+        if not cart:
+            return redirect("/cart")
 
-    db.session.commit()
+        cart_items = build_cart_items_from_session(cart)
+
+    # ---------------- STOCK CHECK + ORDER CREATE ----------------
+    try:
+        for item in cart_items:
+            product = item["product"]
+            qty = item["qty"]
+            size = item["size"]
+
+            if size:
+                size_obj = ProductSize.query.filter_by(
+                    product_id=product.id,
+                    size=size
+                ).first()
+
+                if not size_obj or size_obj.stock < qty:
+                    flash(f"{size} size is out of stock ❌", "error")
+                    return redirect(url_for("product_page", pid=product.id))
+
+                size_obj.stock -= qty
+                update_product_visibility(product.id)
+
+            for _ in range(qty):
+                new_order = Order(
+                    order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
+                    user_id=session["user_id"],
+                    product_id=product.id,
+                    address_id=address_id,
+                    payment_method=payment_method,
+                    payment_id=session.get("razorpay_payment_id"),
+                    status="PLACED",
+                    size=size
+                )
+
+                db.session.add(new_order)
+                db.session.flush()
+                created_ids.append(new_order.id)
+
+                # duplicate order_id kakunda tiny delay
+                time.sleep(0.001)
+
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        print("ORDER CREATE ERROR:", e)
+        return "Order creation failed ❌"
 
     orders = Order.query.options(
         joinedload(Order.product),
         joinedload(Order.address)
     ).filter(Order.id.in_(created_ids)).all()
 
-    final_amount = session.get("final_amount") or session.get("total_after_coupon", 0)
+    final_amount = session.get("final_amount", 0)
 
-    # 2) SHIPROCKET CREATE
+    # ---------------- SHIPROCKET CREATE ORDER ----------------
     try:
         user = User.query.get(session["user_id"])
         address = Address.query.get(address_id)
 
-        # One grouped order id for Shiprocket
         master_order_id = orders[0].order_id if orders else "SKSORDER"
 
         sr_result = create_shiprocket_order(
@@ -1759,26 +1986,45 @@ def payment_success():
             total_amount=final_amount
         )
 
-        if sr_result["ok"]:
-            sr_data = sr_result["data"]
+        if sr_result.get("ok"):
+            sr_data = sr_result.get("data", {}) or {}
 
             shiprocket_order_id = sr_data.get("order_id")
             shipment_id = sr_data.get("shipment_id")
-            status_text = sr_data.get("status") or "CREATED"
+            status_text = sr_data.get("status")
+
+            # nested response handle
+            if isinstance(sr_data.get("data"), dict):
+                nested = sr_data.get("data", {})
+
+                if not shiprocket_order_id:
+                    shiprocket_order_id = nested.get("order_id") or nested.get("id")
+
+                if not shipment_id:
+                    shipment_id = nested.get("shipment_id")
+
+                if not status_text:
+                    status_text = nested.get("status")
+
+            # safe fallback
+            status_text = status_text or "NEW"
 
             for o in orders:
-                o.shiprocket_order_id = str(shiprocket_order_id or "")
-                o.shiprocket_shipment_id = str(shipment_id or "")
+                o.shiprocket_order_id = str(shiprocket_order_id) if shiprocket_order_id else None
+                o.shiprocket_shipment_id = str(shipment_id) if shipment_id else None
                 o.shiprocket_status = status_text
 
             db.session.commit()
+            print("SHIPROCKET ORDER SAVED:", shiprocket_order_id, shipment_id, status_text)
+
         else:
-            print("Shiprocket create failed:", sr_result["error"])
+            print("Shiprocket create failed:", sr_result.get("error"))
 
     except Exception as e:
+        db.session.rollback()
         print("Shiprocket integration failed:", e)
 
-    # 3) EMAIL / WHATSAPP
+    # ---------------- WHATSAPP / EMAIL ----------------
     try:
         user = User.query.get(session["user_id"])
         address = Address.query.get(address_id)
@@ -1862,18 +2108,21 @@ def payment_success():
     except Exception as e:
         print("Order WhatsApp/Email send failed:", e)
 
-    # 4) CLEAR SESSION
+    # ---------------- CLEAR SESSION ----------------
     session.pop("cart", None)
+    session.pop("buy_now_item", None)
     session.pop("total_after_coupon", None)
     session.pop("final_amount", None)
+    session.pop("address", None)
+    session.pop("payment_method", None)
+    session.pop("razorpay_order_id", None)
+    session.pop("razorpay_payment_id", None)
 
     return render_template(
         "payment_success.html",
         orders=orders,
         final_amount=final_amount
     )
-
-
     
 @app.route("/shop")
 def shop():

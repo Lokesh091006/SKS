@@ -4,26 +4,20 @@
     <meta charset="UTF-8">
     <title>{{ product.name }} | Mall SKS</title>
 
-    <!-- RESPONSIVE -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- MAIN CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 </head>
 <body>
 
 {% include "header.html" %}
 
-<!-- ================= PRODUCT PAGE ================= -->
 <section class="product-page">
 
-    <!-- LEFT : IMAGE -->
     <div class="product-image">
         <div class="slider">
 
-            <!-- LEFT ARROW -->
             <button class="prev" id="prevBtn">❮</button>
 
             <div class="slides" id="slides">
@@ -52,25 +46,24 @@
                 {% endif %}
             </div>
 
-            <!-- RIGHT ARROW -->
             <button class="next" id="nextBtn">❯</button>
 
         </div>
     </div>
 
-    <!-- RIGHT : DETAILS -->
     <div class="product-details">
 
         <h1 class="product-title">{{ product.name }}</h1>
         <p class="product-price">₹ {{ product.price }}</p>
 
-        {% set all_out = sizes|selectattr("stock", "equalto", 0)|list|length == sizes|length %}
+        {% set valid_sizes = sizes | selectattr("size") | list %}
+        {% set has_sizes = valid_sizes|length > 0 %}
+        {% set all_out = has_sizes and (sizes|selectattr("stock", "equalto", 0)|list|length == sizes|length) %}
 
         {% if all_out %}
             <p style="color:red; font-weight:bold;">Sold Out 🔥</p>
         {% endif %}
 
-        <!-- PRODUCT DESCRIPTION -->
         {% if product.description %}
             <p class="product-desc">{{ product.description }}</p>
         {% else %}
@@ -80,24 +73,26 @@
             </p>
         {% endif %}
 
-        <!-- SIZE SELECTION -->
+        {% if has_sizes %}
         <div class="size-box">
             <label>Select Size:</label>
             <div class="sizes">
                 {% for s in sizes %}
-                    {% if s.stock > 0 %}
-                        <span class="size">{{ s.size }}</span>
-                    {% else %}
-                        <span class="size sold">
-                            {{ s.size }} ❌
-                        </span>
+                    {% if s.size %}
+                        {% if s.stock > 0 %}
+                            <span class="size">{{ s.size }}</span>
+                        {% else %}
+                            <span class="size sold">{{ s.size }} ❌</span>
+                        {% endif %}
                     {% endif %}
                 {% endfor %}
             </div>
             <input type="hidden" name="size" id="selectedSize">
         </div>
+        {% else %}
+            <input type="hidden" name="size" id="selectedSize" value="">
+        {% endif %}
 
-        <!-- QUANTITY -->
         <div class="qty-box">
             <label for="qty">Quantity</label>
             <select id="qty">
@@ -107,15 +102,12 @@
             </select>
         </div>
 
-        <!-- ACTION BUTTONS -->
         <div class="product-buttons">
 
-            <!-- WISHLIST -->
             <div class="wishlist-wrap">
                 <i id="wishlistIcon" class="fa-regular fa-heart"></i>
             </div>
 
-            <!-- CART -->
             <a href="#" id="addToCartBtn" class="btn-cart"
                {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
                 🛒
@@ -128,7 +120,6 @@
 
         </div>
 
-        <!-- FEATURES -->
         <ul class="features">
             <li>✔ 100% Original Products</li>
             <li>✔ Cash on Delivery Available</li>
@@ -164,15 +155,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // ===== SIZE SELECT =====
-    const sizes = document.querySelectorAll(".size");
+    const sizeEls = document.querySelectorAll(".size");
     const hiddenInput = document.getElementById("selectedSize");
+    const hasSizes = sizeEls.length > 0;
 
-    sizes.forEach(size => {
+    sizeEls.forEach(size => {
         size.addEventListener("click", () => {
-            if (size.classList.contains("sold")) {
-                return;
-            }
-            sizes.forEach(s => s.classList.remove("active"));
+            if (size.classList.contains("sold")) return;
+
+            sizeEls.forEach(s => s.classList.remove("active"));
             size.classList.add("active");
             hiddenInput.value = size.innerText.replace(" ❌", "").trim();
         });
@@ -181,29 +172,48 @@ document.addEventListener("DOMContentLoaded", function () {
     // ===== BUTTONS =====
     const addToCartBtn = document.getElementById("addToCartBtn");
     const buyNowBtn = document.getElementById("buyNowBtn");
+    const qtyEl = document.getElementById("qty");
 
     addToCartBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        if (!hiddenInput.value) {
+
+        if (hasSizes && !hiddenInput.value) {
             alert("Select size first!");
             return;
         }
-        window.location.href = "{{ url_for('add_to_cart', product_id=product.id) }}" + "?size=" + encodeURIComponent(hiddenInput.value);
+
+        let url = "{{ url_for('add_to_cart', product_id=product.id) }}" +
+                  "?qty=" + encodeURIComponent(qtyEl.value);
+
+        if (hasSizes) {
+            url += "&size=" + encodeURIComponent(hiddenInput.value);
+        }
+
+        window.location.href = url;
     });
 
     buyNowBtn.addEventListener("click", function (e) {
         e.preventDefault();
-        if (!hiddenInput.value) {
+
+        if (hasSizes && !hiddenInput.value) {
             alert("Select size first!");
             return;
         }
-        window.location.href = "{{ url_for('address', product_id=product.id) }}" + "?size=" + encodeURIComponent(hiddenInput.value);
+
+        let url = "{{ url_for('buy_now', product_id=product.id) }}" +
+                  "?qty=" + encodeURIComponent(qtyEl.value);
+
+        if (hasSizes) {
+            url += "&size=" + encodeURIComponent(hiddenInput.value);
+        }
+
+        window.location.href = url;
     });
 
-    // ===== ❤️ WISHLIST =====
+    // ===== WISHLIST =====
     const wishlistIcon = document.getElementById("wishlistIcon");
-
     const wishlist = {{ session.get("wishlist", [])|tojson }};
+
     if (wishlist.includes({{ product.id }})) {
         wishlistIcon.classList.add("fa-solid");
         wishlistIcon.classList.remove("fa-regular");
@@ -211,16 +221,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     wishlistIcon.addEventListener("click", function () {
-
-        if (!hiddenInput.value) {
-            alert("Select size first!");
-            return;
-        }
-
         fetch(`/add-to-wishlist/{{ product.id }}`)
             .then(res => res.json())
             .then(data => {
-
                 if (data.status === "added") {
                     wishlistIcon.classList.add("fa-solid");
                     wishlistIcon.classList.remove("fa-regular");
@@ -230,17 +233,14 @@ document.addEventListener("DOMContentLoaded", function () {
                     wishlistIcon.classList.remove("fa-solid");
                     wishlistIcon.style.color = "black";
                 }
-
             });
-
     });
-
 });
 
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".size").forEach(el => {
         if (el.classList.contains("sold")) {
-            el.onclick = function(){
+            el.onclick = function () {
                 alert("This size is sold out ❌");
             }
         }
