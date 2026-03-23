@@ -53,15 +53,12 @@ body{
     background: #fff;
     padding: 20px;
     box-sizing: border-box;
-
     position: fixed;
     top: 80px;
     left: 0;
     height: calc(100vh - 80px);
-
     transform: translateX(-100%);
     transition: transform 0.3s ease;
-
     z-index: 9999;
     overflow-y: auto;
     box-shadow: 2px 0 10px rgba(0,0,0,0.08);
@@ -130,6 +127,17 @@ body{
     border-radius: 8px;
     border: 1px solid #ddd;
     outline: none;
+}
+
+.clear-filter-btn{
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #ff4d8d;
+    color: white !important;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
 }
 
 /* PRODUCTS GRID */
@@ -225,7 +233,16 @@ body{
 <!-- TOP BAR -->
 <div class="shop-topbar">
     <div class="filter-toggle">☰</div>
-    Filters
+
+    {% if page == "men" %}
+        Men Filters
+    {% elif page == "women" %}
+        Women Filters
+    {% elif page == "kids" %}
+        Kids Filters
+    {% else %}
+        Filters
+    {% endif %}
 </div>
 
 <div class="shop-layout">
@@ -252,26 +269,29 @@ body{
 
                 <p onclick="toggleSection('shirtBox')">Shirts ▸</p>
                 <div id="shirtBox" class="sub-box-inner">
-                    <a href="/category/men?type=shirt&brand=ramraj">Ramraj</a>
-                    <a href="/category/men?type=shirt&brand=coolcolours">Coolcolours</a>
-                    <a href="/category/men?type=shirt&brand=whitehouse">White House</a>
-                    <a href="/category/men?type=shirt&brand=red_white">Red & White</a>
-                    <a href="/category/men?type=shirt&brand=oyemberg">Oyemberg</a>
+                    <a href="{{ url_for('category', name='men', type='shirt', brand='ramraj', q=q, sort=sort) }}">Ramraj</a>
+                    <a href="{{ url_for('category', name='men', type='shirt', brand='coolcolours', q=q, sort=sort) }}">Coolcolours</a>
+                    <a href="{{ url_for('category', name='men', type='shirt', brand='whitehouse', q=q, sort=sort) }}">White House</a>
+                    <a href="{{ url_for('category', name='men', type='shirt', brand='red_white', q=q, sort=sort) }}">Red & White</a>
+                    <a href="{{ url_for('category', name='men', type='shirt', brand='oyemberg', q=q, sort=sort) }}">Oyemberg</a>
                 </div>
 
-                <p><a href="/category/men?type=tshirt">T-Shirts</a></p>
-                <p><a href="/category/men?type=jeans">Jeans</a></p>
-                <p><a href="/category/men?type=Cottonpants">Cotton Pants</a></p>
-                <p><a href="/category/men?type=Nightwear">Night Wear</a></p>
+                <p><a href="{{ url_for('category', name='men', type='tshirt', q=q, sort=sort) }}">T-Shirts</a></p>
+                <p><a href="{{ url_for('category', name='men', type='jeans', q=q, sort=sort) }}">Jeans</a></p>
+                <p><a href="{{ url_for('category', name='men', type='Cottonpants', q=q, sort=sort) }}">Cotton Pants</a></p>
+                <p><a href="{{ url_for('category', name='men', type='Nightwear', q=q, sort=sort) }}">Night Wear</a></p>
             </div>
 
             <div class="sort-box">
-                <select id="sortSelect" onchange="sortProducts()">
+                <select id="sortSelect" onchange="applySort()">
                     <option value="">Sort</option>
-                    <option value="low">Price: Low → High</option>
-                    <option value="high">Price: High → Low</option>
+                    <option value="low" {% if sort == 'low' %}selected{% endif %}>Price: Low → High</option>
+                    <option value="high" {% if sort == 'high' %}selected{% endif %}>Price: High → Low</option>
+                    <option value="az" {% if sort == 'az' %}selected{% endif %}>A → Z</option>
                 </select>
             </div>
+
+            <a href="{{ url_for('category', name='men') }}" class="clear-filter-btn">Clear Filters</a>
         </div>
         {% endif %}
 
@@ -284,27 +304,30 @@ body{
 
                 <p onclick="toggleSection('sareeBox')">Sarees ▸</p>
                 <div id="sareeBox" class="sub-box-inner">
-                    <a href="{{ url_for('category', name='women', type='saree', brand='pattusarees') }}">Pattu Sarees</a>
-                    <a href="{{ url_for('category', name='women', type='saree', brand='cottonsarees') }}">Cotton Sarees</a>
-                    <a href="{{ url_for('category', name='women', type='saree', brand='fancysarees') }}">Fancy Sarees</a>
-                    <a href="{{ url_for('category', name='women', type='saree', brand='syntheticsarees') }}">Synthetic Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='pattusarees', q=q, sort=sort) }}">Pattu Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='cottonsarees', q=q, sort=sort) }}">Cotton Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='fancysarees', q=q, sort=sort) }}">Fancy Sarees</a>
+                    <a href="{{ url_for('category', name='women', type='saree', brand='syntheticsarees', q=q, sort=sort) }}">Synthetic Sarees</a>
                 </div>
 
-                <p><a href="{{ url_for('category', name='women', type='kurti') }}">Kurties</a></p>
-                <p><a href="{{ url_for('category', name='women', type='legging') }}">Leggings</a></p>
-                <p><a href="{{ url_for('category', name='women', type='chudidar') }}">Chudidars</a></p>
-                <p><a href="{{ url_for('category', name='women', type='croptop') }}">Crop Tops</a></p>
-                <p><a href="{{ url_for('category', name='women', type='innerwear') }}">InnerWear</a></p>
-                <p><a href="{{ url_for('category', name='women', type='nighty') }}">Nighty</a></p>
+                <p><a href="{{ url_for('category', name='women', type='kurti', q=q, sort=sort) }}">Kurties</a></p>
+                <p><a href="{{ url_for('category', name='women', type='legging', q=q, sort=sort) }}">Leggings</a></p>
+                <p><a href="{{ url_for('category', name='women', type='chudidar', q=q, sort=sort) }}">Chudidars</a></p>
+                <p><a href="{{ url_for('category', name='women', type='croptop', q=q, sort=sort) }}">Crop Tops</a></p>
+                <p><a href="{{ url_for('category', name='women', type='innerwear', q=q, sort=sort) }}">InnerWear</a></p>
+                <p><a href="{{ url_for('category', name='women', type='nighty', q=q, sort=sort) }}">Nighty</a></p>
             </div>
 
             <div class="sort-box">
-                <select id="sortSelect" onchange="sortProducts()">
+                <select id="sortSelect" onchange="applySort()">
                     <option value="">Sort</option>
-                    <option value="low">Price: Low → High</option>
-                    <option value="high">Price: High → Low</option>
+                    <option value="low" {% if sort == 'low' %}selected{% endif %}>Price: Low → High</option>
+                    <option value="high" {% if sort == 'high' %}selected{% endif %}>Price: High → Low</option>
+                    <option value="az" {% if sort == 'az' %}selected{% endif %}>A → Z</option>
                 </select>
             </div>
+
+            <a href="{{ url_for('category', name='women') }}" class="clear-filter-btn">Clear Filters</a>
         </div>
         {% endif %}
 
@@ -316,46 +339,68 @@ body{
             <div id="kidsBox" class="sub-box" style="display:block;">
                 <p onclick="toggleSection('boysBox')">Boys ▸</p>
                 <div id="boysBox" class="sub-box-inner">
-                    <a href="{{ url_for('category', name='kids', type='boys', brand='partywear') }}">Party Wear</a>
-                    <a href="{{ url_for('category', name='kids', type='boys', brand='nightdress') }}">Night Dress</a>
+                    <a href="{{ url_for('category', name='kids', type='boys', brand='partywear', q=q, sort=sort) }}">Party Wear</a>
+                    <a href="{{ url_for('category', name='kids', type='boys', brand='nightdress', q=q, sort=sort) }}">Night Dress</a>
                 </div>
 
                 <p onclick="toggleSection('girlsBox')">Girls ▸</p>
                 <div id="girlsBox" class="sub-box-inner">
-                    <a href="{{ url_for('category', name='kids', type='girls', brand='partywear') }}">Party Wear</a>
-                    <a href="{{ url_for('category', name='kids', type='girls', brand='nightdress') }}">Night Dress</a>
+                    <a href="{{ url_for('category', name='kids', type='girls', brand='partywear', q=q, sort=sort) }}">Party Wear</a>
+                    <a href="{{ url_for('category', name='kids', type='girls', brand='nightdress', q=q, sort=sort) }}">Night Dress</a>
                 </div>
 
-                <p><a href="{{ url_for('category', name='kids', type='babywear') }}">Baby Wear</a></p>
+                <p><a href="{{ url_for('category', name='kids', type='babywear', q=q, sort=sort) }}">Baby Wear</a></p>
             </div>
 
             <div class="sort-box">
-                <select id="sortSelect" onchange="sortProducts()">
+                <select id="sortSelect" onchange="applySort()">
                     <option value="">Sort</option>
-                    <option value="low">Price: Low → High</option>
-                    <option value="high">Price: High → Low</option>
+                    <option value="low" {% if sort == 'low' %}selected{% endif %}>Price: Low → High</option>
+                    <option value="high" {% if sort == 'high' %}selected{% endif %}>Price: High → Low</option>
+                    <option value="az" {% if sort == 'az' %}selected{% endif %}>A → Z</option>
                 </select>
             </div>
+
+            <a href="{{ url_for('category', name='kids') }}" class="clear-filter-btn">Clear Filters</a>
         </div>
         {% endif %}
     </div>
 
     <!-- PRODUCTS -->
-    <div class="products">
-        {% for p in products %}
-        <div class="card" data-price="{{ p.price }}">
-            <a href="{{ url_for('product_page', pid=p.id) }}">
-                {% if p.image and p.image.startswith('http') %}
-                    <img src="{{ p.image }}" class="product-img">
-                {% else %}
-                    <img src="{{ p.image|imgsrc }}" class="product-img">
-                {% endif %}
-            </a>
+    <div style="flex:1; width:100%;">
+        {% if q %}
+            <h2 style="margin:10px 10px 20px;">Results for "{{ q }}"</h2>
+        {% elif page == "men" %}
+            <h2 style="margin:10px 10px 20px;">Men Products</h2>
+        {% elif page == "women" %}
+            <h2 style="margin:10px 10px 20px;">Women Products</h2>
+        {% elif page == "kids" %}
+            <h2 style="margin:10px 10px 20px;">Kids Products</h2>
+        {% else %}
+            <h2 style="margin:10px 10px 20px;">All Products</h2>
+        {% endif %}
 
-            <h4>{{ p.name }}</h4>
-            <b>₹{{ p.price }}</b>
+        {% if products and products|length > 0 %}
+        <div class="products">
+            {% for p in products %}
+            <div class="card">
+                <a href="{{ url_for('product_page', pid=p.id) }}">
+                    {% if p.image and p.image.startswith('http') %}
+                        <img src="{{ p.image }}" class="product-img">
+                    {% else %}
+                        <img src="{{ p.image|imgsrc }}" class="product-img">
+                    {% endif %}
+                    <h4>{{ p.name }}</h4>
+                    <b>₹{{ p.price }}</b>
+                </a>
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+        {% else %}
+        <div style="padding:40px; text-align:center; background:white; border-radius:12px;">
+            <h3>❌ No products found</h3>
+        </div>
+        {% endif %}
     </div>
 
 </div>
@@ -401,30 +446,17 @@ function toggleSection(id){
     }
 }
 
-function sortProducts(){
-    let select = document.getElementById("sortSelect");
-    if(!select) return;
+function applySort(){
+    const value = document.getElementById("sortSelect").value;
+    const url = new URL(window.location.href);
 
-    let value = select.value;
-    let productsContainer = document.querySelector(".products");
-    let products = Array.from(document.querySelectorAll(".card"));
+    if(value){
+        url.searchParams.set("sort", value);
+    } else {
+        url.searchParams.delete("sort");
+    }
 
-    products.sort(function(a, b){
-        let priceA = parseFloat(a.getAttribute("data-price")) || 0;
-        let priceB = parseFloat(b.getAttribute("data-price")) || 0;
-
-        if(value === "low"){
-            return priceA - priceB;
-        } else if(value === "high"){
-            return priceB - priceA;
-        } else {
-            return 0;
-        }
-    });
-
-    products.forEach(function(product){
-        productsContainer.appendChild(product);
-    });
+    window.location.href = url.toString();
 }
 </script>
 

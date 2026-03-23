@@ -491,39 +491,50 @@ from flask import request, render_template
 
 @app.route("/", methods=["GET"])
 def home():
-    query = request.args.get("q")
+    query = request.args.get("q", "").strip()
     page = "home"
 
     if query:
         words = query.lower().split()
         products_query = Product.query.filter_by(is_active=True)
 
+        # SEARCH in name / category / type / brand
         for w in words:
             base = w.rstrip("s")
-            products_query = products_query.filter(
-                Product.name.ilike(f"%{base}%")
-            )
+            like = f"%{base}%"
+            products_query = products_query.filter(or_(
+                Product.name.ilike(like),
+                Product.category.ilike(like),
+                Product.type.ilike(like),
+                Product.brand.ilike(like)
+            ))
 
-        
         products = products_query.all()
 
-        # 🔥 SMART CATEGORY DETECTION
-        if products:
-            first_product_name = products[0].name.lower()
+        q_lower = query.lower()
 
-            if "men" in first_product_name:
-                page = "men"
-            elif "women" in first_product_name:
+        # 1) keyword based smart category detect
+        if any(x in q_lower for x in ["saree", "kurti", "legging", "chudidar", "nighty", "croptop", "women", "ladies"]):
+            page = "women"
+        elif any(x in q_lower for x in ["shirt", "tshirt", "jeans", "cottonpants", "men", "gents", "nightwear"]):
+            page = "men"
+        elif any(x in q_lower for x in ["kids", "boys", "girls", "babywear", "baby"]):
+            page = "kids"
+
+        # 2) if still not found, product category batti decide cheyyi
+        elif products:
+            first_category = (products[0].category or "").lower()
+
+            if "women" in first_category:
                 page = "women"
-            elif "kids" in first_product_name:
+            elif "men" in first_category:
+                page = "men"
+            elif "kids" in first_category:
                 page = "kids"
             else:
                 page = "home"
 
-    
     else:
-
-
         products = Product.query.filter_by(is_active=True).all()
 
     return render_template(
@@ -532,7 +543,6 @@ def home():
         query=query,
         page=page
     )
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -871,32 +881,41 @@ def my_orders():
 
 @app.route("/category/<name>")
 def category(name):
-    q = request.args.get("q")
+    q = request.args.get("q", "").strip()
     min_price = request.args.get("min")
     max_price = request.args.get("max")
-    color = request.args.get("color")
-    type_ = request.args.get("type")
-    brand = request.args.get("brand")
-    sort = request.args.get("sort")
-    sub = request.args.get("sub")
+    color = request.args.get("color", "").strip()
+    type_ = request.args.get("type", "").strip()
+    brand = request.args.get("brand", "").strip()
+    sort = request.args.get("sort", "").strip()
+    sub = request.args.get("sub", "").strip()
 
-    # ✅ exact category match
-    query = Product.query.filter_by(is_active=True).filter(Product.category.ilike(name))
+    query = Product.query.filter_by(is_active=True).filter(
+        Product.category.ilike(f"%{name.strip()}%")
+    )
 
     if q:
-        query = query.filter(Product.name.ilike(f"%{q}%"))
+        words = q.lower().split()
+        for w in words:
+            like = f"%{w.rstrip('s')}%"
+            query = query.filter(or_(
+                Product.name.ilike(like),
+                Product.category.ilike(like),
+                Product.type.ilike(like),
+                Product.brand.ilike(like)
+            ))
 
     if type_:
-        query = query.filter(Product.type.ilike(type_))
+        query = query.filter(Product.type.ilike(f"%{type_}%"))
 
     if brand:
-        query = query.filter(Product.brand.ilike(brand))
+        query = query.filter(Product.brand.ilike(f"%{brand}%"))
 
     if sub:
-        query = query.filter(Product.sub.ilike(sub))
+        query = query.filter(Product.sub.ilike(f"%{sub}%"))
 
     if color:
-        query = query.filter(Product.color.ilike(color))
+        query = query.filter(Product.color.ilike(f"%{color}%"))
 
     if min_price:
         query = query.filter(Product.price >= int(min_price))
@@ -913,9 +932,19 @@ def category(name):
 
     products = query.all()
 
-    return render_template("shop.html", products=products, page=name)
-
-
+    return render_template(
+        "shop.html",
+        products=products,
+        page=name.lower(),
+        q=q,
+        min_price=min_price,
+        max_price=max_price,
+        color=color,
+        type_=type_,
+        brand=brand,
+        sort=sort,
+        sub=sub
+    )
 
 
 
@@ -2126,21 +2155,19 @@ def payment_success():
     
 @app.route("/shop")
 def shop():
-
-    q = request.args.get("q")
+    q = request.args.get("q", "").strip()
     min_price = request.args.get("min")
     max_price = request.args.get("max")
-    color = request.args.get("color")
-    type_ = request.args.get("type")
-    category = request.args.get("category")
-    sort = request.args.get("sort")
-    sub = request.args.get("sub")
-    size = request.args.get("size")
-    brand = request.args.get("brand")
+    color = request.args.get("color", "").strip()
+    type_ = request.args.get("type", "").strip()
+    category = request.args.get("category", "").strip()
+    sort = request.args.get("sort", "").strip()
+    sub = request.args.get("sub", "").strip()
+    size = request.args.get("size", "").strip()
+    brand = request.args.get("brand", "").strip()
 
     query = Product.query.filter_by(is_active=True)
 
-    # 🔍 SEARCH
     if q:
         words = q.lower().split()
         for w in words:
@@ -2149,45 +2176,33 @@ def shop():
                 Product.name.ilike(like),
                 Product.category.ilike(like),
                 Product.type.ilike(like),
-                Product.brand.ilike(like)   # 🔥 ADD THIS
+                Product.brand.ilike(like)
             ))
 
-    # 🧥 CATEGORY
     if category:
-        query = query.filter(Product.category.ilike(f"%{category.strip()}%"))
+        query = query.filter(Product.category.ilike(f"%{category}%"))
 
-    # 👕 TYPE
     if type_:
-        query = query.filter(Product.type.ilike(f"%{type_.strip()}%"))
+        query = query.filter(Product.type.ilike(f"%{type_}%"))
 
-    # 🏷 BRAND (🔥 IMPROVED)
     if brand:
-        brand_clean = brand.strip().lower()
+        query = query.filter(Product.brand.ilike(f"%{brand}%"))
 
-        query = query.filter(
-            Product.brand.ilike(f"%{brand_clean}%")
-        )
-
-    # 🔽 SUB CATEGORY
     if sub:
-        query = query.filter(Product.sub.ilike(f"%{sub.strip()}%"))
+        query = query.filter(Product.sub.ilike(f"%{sub}%"))
 
-    # 📏 SIZE
     if size:
         query = query.filter(Product.size == size)
 
-    # 🎨 COLOR
     if color:
-        query = query.filter(Product.color.ilike(f"%{color.strip()}%"))
+        query = query.filter(Product.color.ilike(f"%{color}%"))
 
-    # 💰 PRICE
     if min_price:
         query = query.filter(Product.price >= int(min_price))
 
     if max_price:
         query = query.filter(Product.price <= int(max_price))
 
-    # 🔃 SORT
     if sort == "low":
         query = query.order_by(Product.price.asc())
     elif sort == "high":
@@ -2197,7 +2212,33 @@ def shop():
 
     products = query.all()
 
-    return render_template("shop.html", products=products)
+    page = "home"
+    if category:
+        page = category.lower()
+    elif products:
+        first_cat = (products[0].category or "").strip().lower()
+        if "men" in first_cat:
+            page = "men"
+        elif "women" in first_cat:
+            page = "women"
+        elif "kids" in first_cat:
+            page = "kids"
+
+    return render_template(
+        "shop.html",
+        products=products,
+        page=page,
+        q=q,
+        min_price=min_price,
+        max_price=max_price,
+        color=color,
+        type_=type_,
+        category=category,
+        sort=sort,
+        sub=sub,
+        size=size,
+        brand=brand
+    )
 
 
 
