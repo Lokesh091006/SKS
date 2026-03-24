@@ -2157,10 +2157,19 @@ def payment_success():
 
         customer_name = user.username or "Customer"
         customer_mobile = user.mobile or ""
-        city = (address.city or "").strip() if address else ""
-        delivery_days = "2-3"
         order_no = orders[0].order_id if orders else "SKSORDER"
 
+        # Delivery address text for WhatsApp
+        delivery_address_text = ""
+        if address:
+            delivery_address_text = (
+                f"{address.house or ''}, "
+                f"{address.street or ''}, "
+                f"{address.city or ''}, "
+                f"{address.state or ''} - {address.pincode or ''}"
+            ).strip(", ")
+
+        # Email address block
         address_html = ""
         if address:
             address_html = f"""
@@ -2211,6 +2220,7 @@ def payment_success():
 
         orders_link = "https://www.kalasilks.com/my-orders"
 
+        # WhatsApp order confirmation
         if customer_mobile and orders:
             first_order = orders[0]
 
@@ -2220,14 +2230,14 @@ def payment_success():
                     customer_name,
                     order_no,
                     final_amount,
-                    delivery_days,
-                    city or "Your City"
+                    delivery_address_text or "Address not available"
                 )
 
                 for o in orders:
                     o.wa_order_confirm_sent = True
                 db.session.commit()
 
+        # Order email
         if user and user.email:
             send_order_email(
                 user,
