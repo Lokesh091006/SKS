@@ -1900,6 +1900,36 @@ def tracking_webhook():
 
     return "OK", 200
 
+
+@app.route("/razorpay-checkout")
+def razorpay_checkout():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    amount = session.get("final_amount")
+    if not amount:
+        return redirect(url_for("payment"))
+
+    amount_paise = int(float(amount) * 100)
+
+    razorpay_order = client.order.create({
+        "amount": amount_paise,
+        "currency": "INR",
+        "payment_capture": 1
+    })
+
+    session["razorpay_order_id"] = razorpay_order["id"]
+
+    user = User.query.get(session["user_id"])
+
+    return render_template(
+        "razorpay_checkout.html",
+        razorpay_key=os.getenv("RAZORPAY_KEY_ID"),
+        amount=amount_paise,
+        order_id=razorpay_order["id"],
+        user=user
+    )
+
 @app.route("/razorpay-verify", methods=["POST"])
 def razorpay_verify():
     if "user_id" not in session:
