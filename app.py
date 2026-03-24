@@ -251,7 +251,7 @@ def send_email_msg91(to_email, subject, html_body):
         ],
         "from": {
             "name": "Sri Kala Silks",
-            "email": "support@kalasilks.com"
+            "email": "no-reply@kalasilks.com"
         },
         "subject": subject,
         "body": {
@@ -285,7 +285,7 @@ def send_welcome_email(user):
         ],
         "from": {
             "name": "Sri Kala Silks",
-            "email": "support@kalasilks.com"
+            "email": "no-reply@kalasilks.com"
         },
         "template_id": "welcome_kalasilks",
         "variables": {
@@ -321,7 +321,7 @@ def send_order_email(user, order_id, amount, address_html, items_html, orders_li
         ],
         "from": {
             "name": "Sri Kala Silks",
-            "email": "support@kalasilks.com"
+            "email": "no-reply@kalasilks.com"
         },
         "template_id": "kalasilks_order_confirmation",
         "variables": {
