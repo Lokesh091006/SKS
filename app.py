@@ -126,18 +126,11 @@ def send_whatsapp_otp(mobile, otp):
 
 
 
-
-
-
-
-
-
-
-
-def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, delivery_days, city):
-    import os, requests
-
+def send_msg91_whatsapp_template(template_name, mobile, components):
     authkey = os.getenv("MSG91_AUTHKEY")
+    if not authkey:
+        print("❌ MSG91_AUTHKEY missing")
+        return None
 
     url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/"
 
@@ -148,7 +141,7 @@ def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, de
             "messaging_product": "whatsapp",
             "type": "template",
             "template": {
-                "name": "order_confirm_kalasilks_01",
+                "name": template_name,
                 "language": {
                     "code": "en",
                     "policy": "deterministic"
@@ -156,18 +149,8 @@ def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, de
                 "namespace": "4141e79d_649d_402a_8391_fbd98e195512",
                 "to_and_components": [
                     {
-                        "to": ["91" + mobile],
-                        "components": {
-                            "body_1": {"type": "text", "value": customer_name},
-                            "body_2": {"type": "text", "value": order_id},
-                            "body_3": {"type": "text", "value": str(amount)},
-                            "body_4": {"type": "text", "value": delivery_days},
-                            "body_5": {"type": "text", "value": city},
-
-                             
-
-                           
-                        }
+                        "to": ["91" + str(mobile).strip()],
+                        "components": components
                     }
                 ]
             }
@@ -179,9 +162,65 @@ def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, de
         "authkey": authkey
     }
 
-    r = requests.post(url, json=payload, headers=headers, timeout=15)
-    print("MSG91 ORDER:", r.status_code, r.text)
+    try:
+        r = requests.post(url, json=payload, headers=headers, timeout=20)
+        print(f"MSG91 {template_name}:", r.status_code, r.text)
+        return r.text
+    except Exception as e:
+        print(f"MSG91 {template_name} ERROR:", e)
+        return None
 
+
+
+
+
+
+
+def send_whatsapp_order_confirmation(mobile, customer_name, order_id, amount, delivery_address):
+    components = {
+        "body_1": {"type": "text", "value": customer_name},
+        "body_2": {"type": "text", "value": order_id},
+        "body_3": {"type": "text", "value": str(amount)},
+        "body_4": {"type": "text", "value": delivery_address},
+    }
+
+    return send_msg91_whatsapp_template(
+        "order_confirm_kalasilks_09",
+        mobile,
+        components
+    )
+
+
+def send_whatsapp_out_for_delivery(mobile, customer_name, order_id, tracking_url=None):
+    components = {
+        "body_1": {"type": "text", "value": customer_name},
+        "body_2": {"type": "text", "value": order_id},
+    }
+
+    if tracking_url:
+        components["button_1"] = {
+            "type": "text",
+            "sub_type": "url",
+            "value": tracking_url
+        }
+
+    return send_msg91_whatsapp_template(
+        "order_ofd_kalasilks",
+        mobile,
+        components
+    )
+
+def send_whatsapp_delivered(mobile, customer_name, order_id):
+    components = {
+        "body_1": {"type": "text", "value": customer_name},
+        "body_2": {"type": "text", "value": order_id},
+    }
+
+    return send_msg91_whatsapp_template(
+        "order_delivered_kalasilks",
+        mobile,
+        components
+    )
 
 
 
@@ -1823,6 +1862,37 @@ def tracking_webhook():
                 order.status = "PICKUP PENDING"
 
         db.session.commit()
+
+        user = User.query.get(order.user_id)
+        customer_mobile = ""
+        customer_name = "Customer"
+
+        if user:
+            customer_mobile = (user.mobile or "").strip()
+            customer_name = user.username or "Customer"
+
+        if customer_mobile and status:
+            status_upper = status.upper()
+
+            if "OUT FOR DELIVERY" in status_upper and not order.wa_ofd_sent:
+                send_whatsapp_out_for_delivery(
+                    customer_mobile,
+                    customer_name,
+                    order.order_id,
+                    order.tracking_url or "https://www.kalasilks.com/my-orders"
+                )
+                order.wa_ofd_sent = True
+                db.session.commit()
+
+            elif "DELIVERED" in status_upper and not order.wa_delivered_sent:
+                send_whatsapp_delivered(
+                    customer_mobile,
+                    customer_name,
+                    order.order_id
+                )
+                order.wa_delivered_sent = True
+                db.session.commit()
+
         print("UPDATED:", order.order_id, order.status, order.awb_code, order.courier_name, order.tracking_url)
 
     except Exception as e:
@@ -1982,7 +2052,6 @@ def payment_success():
                 db.session.flush()
                 created_ids.append(new_order.id)
 
-                # duplicate order_id kakunda tiny delay
                 time.sleep(0.001)
 
         db.session.commit()
@@ -2022,7 +2091,6 @@ def payment_success():
             shipment_id = sr_data.get("shipment_id")
             status_text = sr_data.get("status")
 
-            # nested response handle
             if isinstance(sr_data.get("data"), dict):
                 nested = sr_data.get("data", {})
 
@@ -2035,7 +2103,6 @@ def payment_success():
                 if not status_text:
                     status_text = nested.get("status")
 
-            # safe fallback
             status_text = status_text or "NEW"
 
             for o in orders:
@@ -2114,15 +2181,22 @@ def payment_success():
 
         orders_link = "https://www.kalasilks.com/my-orders"
 
-        if customer_mobile:
-            send_whatsapp_order_confirmation(
-                customer_mobile,
-                customer_name,
-                order_no,
-                final_amount,
-                delivery_days,
-                city or "Your City"
-            )
+        if customer_mobile and orders:
+            first_order = orders[0]
+
+            if not first_order.wa_order_confirm_sent:
+                send_whatsapp_order_confirmation(
+                    customer_mobile,
+                    customer_name,
+                    order_no,
+                    final_amount,
+                    delivery_days,
+                    city or "Your City"
+                )
+
+                for o in orders:
+                    o.wa_order_confirm_sent = True
+                db.session.commit()
 
         if user and user.email:
             send_order_email(

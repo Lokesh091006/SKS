@@ -16,12 +16,12 @@ class Order(db.Model):
     status = db.Column(db.String(20), default="PLACED")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # ✅ NEW FIELD
     size = db.Column(db.String(10))
 
     user = db.relationship("User", backref="orders")
     product = db.relationship("Product", backref="orders")
     address = db.relationship("Address", backref="orders")
+
     shiprocket_order_id = db.Column(db.String(100), nullable=True)
     shiprocket_shipment_id = db.Column(db.String(100), nullable=True)
     shiprocket_status = db.Column(db.String(100), nullable=True)
@@ -29,3 +29,8 @@ class Order(db.Model):
     courier_name = db.Column(db.String(100), nullable=True)
     tracking_url = db.Column(db.String(500), nullable=True)
     payment_id = db.Column(db.String(120), nullable=True)
+
+    # WhatsApp flags
+    wa_order_confirm_sent = db.Column(db.Boolean, default=False)
+    wa_ofd_sent = db.Column(db.Boolean, default=False)
+    wa_delivered_sent = db.Column(db.Boolean, default=False)
