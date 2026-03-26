@@ -917,7 +917,6 @@ def my_orders():
 
     return render_template("my_orders.html", orders=orders)
 
-
 @app.route("/category/<name>")
 def category(name):
     q = request.args.get("q", "").strip()
@@ -929,8 +928,10 @@ def category(name):
     sort = request.args.get("sort", "").strip()
     sub = request.args.get("sub", "").strip()
 
+    name = name.strip().lower()
+
     query = Product.query.filter_by(is_active=True).filter(
-        Product.category.ilike(f"%{name.strip()}%")
+        Product.category.ilike(name)
     )
 
     if q:
@@ -974,7 +975,7 @@ def category(name):
     return render_template(
         "shop.html",
         products=products,
-        page=name.lower(),
+        page=name,
         q=q,
         min_price=min_price,
         max_price=max_price,
@@ -984,7 +985,6 @@ def category(name):
         sort=sort,
         sub=sub
     )
-
 
 
 from sqlalchemy import and_
@@ -1723,13 +1723,18 @@ def sync_shiprocket_order(order_db_id):
     }
 
     try:
+        # -------------------------------
+        # 1) ORDER SHOW API
+        # -------------------------------
         url = f"https://apiv2.shiprocket.in/v1/external/orders/show/{order.shiprocket_order_id}"
         r = requests.get(url, headers=headers, timeout=30)
         print("SHIPROCKET SHOW ORDER:", r.status_code, r.text)
         r.raise_for_status()
 
         data = r.json()
-        main = data.get("data", {}) if isinstance(data, dict) else {}
+
+        # some responses are nested, some not
+        main = data.get("data", data) if isinstance(data, dict) else {}
         shipments = main.get("shipments", []) or main.get("shipment_details", [])
 
         awb_code = None
@@ -1739,7 +1744,7 @@ def sync_shiprocket_order(order_db_id):
         shiprocket_status = None
 
         if shipments and isinstance(shipments, list):
-            first = shipments[0]
+            first = shipments[0] or {}
             shipment_id = first.get("id") or first.get("shipment_id")
             awb_code = first.get("awb") or first.get("awb_code")
             courier_name = first.get("courier_name") or first.get("courier")
@@ -1752,17 +1757,9 @@ def sync_shiprocket_order(order_db_id):
         tracking_url = tracking_url or main.get("tracking_url")
         shiprocket_status = shiprocket_status or main.get("status")
 
+        # save what we already got
         if shipment_id:
             order.shiprocket_shipment_id = str(shipment_id)
-
-        if awb_code:
-            order.awb_code = str(awb_code)
-
-        if courier_name:
-            order.courier_name = courier_name
-
-        if tracking_url:
-            order.tracking_url = tracking_url
 
         if shiprocket_status:
             order.shiprocket_status = shiprocket_status
@@ -1779,10 +1776,55 @@ def sync_shiprocket_order(order_db_id):
             elif "PICKUP" in s:
                 order.status = "PICKUP PENDING"
 
+        # -------------------------------
+        # 2) TRACKING API BY SHIPMENT ID
+        # -------------------------------
+        final_shipment_id = order.shiprocket_shipment_id or shipment_id
+
+        if final_shipment_id:
+            track_url_api = f"https://apiv2.shiprocket.in/v1/external/courier/track/shipment/{final_shipment_id}"
+            tr = requests.get(track_url_api, headers=headers, timeout=30)
+            print("SHIPROCKET TRACK RESPONSE:", tr.status_code, tr.text)
+
+            if tr.ok:
+                tdata = tr.json()
+
+                tracking_data = tdata.get("tracking_data", {}) if isinstance(tdata, dict) else {}
+                shipment_track = tracking_data.get("shipment_track", [])
+
+                if shipment_track and isinstance(shipment_track, list):
+                    tfirst = shipment_track[0] or {}
+
+                    awb_code = awb_code or tfirst.get("awb_code") or tfirst.get("awb")
+                    courier_name = courier_name or tfirst.get("courier_name") or tfirst.get("courier")
+                    shiprocket_status = shiprocket_status or tfirst.get("current_status") or tfirst.get("status")
+
+                tracking_url = (
+                    tracking_url
+                    or tracking_data.get("track_url")
+                    or tracking_data.get("tracking_url")
+                )
+
+        # -------------------------------
+        # 3) FINAL SAVE
+        # -------------------------------
+        if awb_code:
+            order.awb_code = str(awb_code)
+
+        if courier_name:
+            order.courier_name = courier_name
+
+        if tracking_url:
+            order.tracking_url = tracking_url
+
+        if shiprocket_status:
+            order.shiprocket_status = shiprocket_status
+
         db.session.commit()
         flash("Shiprocket details synced successfully ✅", "success")
 
     except Exception as e:
+        db.session.rollback()
         print("SYNC SHIPROCKET ERROR:", e)
         flash(f"Sync failed: {e}", "danger")
 
