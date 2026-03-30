@@ -527,7 +527,7 @@ with app.app_context():
 
 
 from flask import request, render_template
-
+from sqlalchemy.sql.expression import func
 @app.route("/", methods=["GET"])
 def home():
     query = request.args.get("q", "").strip()
@@ -552,15 +552,12 @@ def home():
 
         q_lower = query.lower()
 
-        # 1) keyword based smart category detect
         if any(x in q_lower for x in ["saree", "kurti", "legging", "chudidar", "nighty", "croptop", "women", "ladies"]):
             page = "women"
         elif any(x in q_lower for x in ["shirt", "tshirt", "jeans", "cottonpants", "men", "gents", "nightwear"]):
             page = "men"
         elif any(x in q_lower for x in ["kids", "boys", "girls", "babywear", "baby"]):
             page = "kids"
-
-        # 2) if still not found, product category batti decide cheyyi
         elif products:
             first_category = (products[0].category or "").lower()
 
@@ -574,7 +571,10 @@ def home():
                 page = "home"
 
     else:
-        products = Product.query.filter_by(is_active=True).all()
+        products = Product.query.filter_by(is_active=True)\
+            .order_by(func.random())\
+            .limit(20)\
+            .all()
 
     return render_template(
         "home.html",
