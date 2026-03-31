@@ -1722,6 +1722,29 @@ def sync_shiprocket_order(order_db_id):
         "Content-Type": "application/json"
     }
 
+    def pick_best_shipment(shipments):
+        """
+        Best shipment ni pick cheyyadam:
+        1. cancelled kakunda undali
+        2. AWB unte better
+        3. latest shipment_id / id unte adhi prefer
+        """
+        if not shipments or not isinstance(shipments, list):
+            return None
+
+        def sort_key(x):
+            status = str(x.get("status") or x.get("current_status") or "").upper()
+            shipment_id = x.get("shipment_id") or x.get("id") or 0
+            awb = x.get("awb_code") or x.get("awb") or ""
+            is_cancelled = 1 if "CANCEL" in status else 0
+            has_awb = 1 if awb else 0
+
+            # cancelled lowest priority
+            return (1 - is_cancelled, has_awb, int(shipment_id) if str(shipment_id).isdigit() else 0)
+
+        shipments = sorted(shipments, key=sort_key, reverse=True)
+        return shipments[0]
+
     try:
         # -------------------------------
         # 1) ORDER SHOW API
@@ -1732,9 +1755,8 @@ def sync_shiprocket_order(order_db_id):
         r.raise_for_status()
 
         data = r.json()
-
-        # some responses are nested, some not
         main = data.get("data", data) if isinstance(data, dict) else {}
+
         shipments = main.get("shipments", []) or main.get("shipment_details", [])
 
         awb_code = None
@@ -1743,27 +1765,94 @@ def sync_shiprocket_order(order_db_id):
         shipment_id = None
         shiprocket_status = None
 
-        if shipments and isinstance(shipments, list):
-            first = shipments[0] or {}
-            shipment_id = first.get("id") or first.get("shipment_id")
-            awb_code = first.get("awb") or first.get("awb_code")
-            courier_name = first.get("courier_name") or first.get("courier")
-            tracking_url = first.get("tracking_url")
-            shiprocket_status = first.get("status") or first.get("current_status")
+        # -------------------------------
+        # 1A) PICK BEST SHIPMENT
+        # -------------------------------
+        best = pick_best_shipment(shipments)
 
+        if best:
+            shipment_id = best.get("shipment_id") or best.get("id")
+            awb_code = best.get("awb_code") or best.get("awb")
+            courier_name = best.get("courier_name") or best.get("courier")
+            tracking_url = best.get("tracking_url")
+            shiprocket_status = best.get("status") or best.get("current_status")
+
+        # fallback from main object
         shipment_id = shipment_id or main.get("shipment_id")
         awb_code = awb_code or main.get("awb_code")
         courier_name = courier_name or main.get("courier_name")
         tracking_url = tracking_url or main.get("tracking_url")
         shiprocket_status = shiprocket_status or main.get("status")
 
-        # save what we already got
+        print("BEST SHIPMENT ID:", shipment_id)
+        print("SHOW API AWB:", awb_code)
+        print("SHOW API COURIER:", courier_name)
+        print("SHOW API STATUS:", shiprocket_status)
+        print("SHOW API TRACK URL:", tracking_url)
+
+        # temp store shipment_id first
         if shipment_id:
             order.shiprocket_shipment_id = str(shipment_id)
 
-        if shiprocket_status:
-            order.shiprocket_status = shiprocket_status
+        # -------------------------------
+        # 2) TRACKING API BY SHIPMENT ID
+        # -------------------------------
+        final_shipment_id = shipment_id or order.shiprocket_shipment_id
 
+        if final_shipment_id:
+            track_url_api = f"https://apiv2.shiprocket.in/v1/external/courier/track/shipment/{final_shipment_id}"
+            tr = requests.get(track_url_api, headers=headers, timeout=30)
+            print("SHIPROCKET TRACK RESPONSE:", tr.status_code, tr.text)
+
+            if tr.ok:
+                tdata = tr.json()
+                tracking_data = tdata.get("tracking_data", {}) if isinstance(tdata, dict) else {}
+                shipment_track = tracking_data.get("shipment_track", [])
+
+                if shipment_track and isinstance(shipment_track, list):
+                    tfirst = shipment_track[0] or {}
+
+                    # IMPORTANT:
+                    # ikkada OR vadakudadhu
+                    # tracking api latest value vaste overwrite cheyyali
+                    new_awb = tfirst.get("awb_code") or tfirst.get("awb")
+                    new_courier = tfirst.get("courier_name") or tfirst.get("courier")
+                    new_status = tfirst.get("current_status") or tfirst.get("status")
+
+                    if new_awb:
+                        awb_code = new_awb
+
+                    if new_courier:
+                        courier_name = new_courier
+
+                    if new_status:
+                        shiprocket_status = new_status
+
+                new_tracking_url = tracking_data.get("track_url") or tracking_data.get("tracking_url")
+                if new_tracking_url:
+                    tracking_url = new_tracking_url
+
+        # fallback tracking url
+        if not tracking_url and awb_code:
+            tracking_url = f"https://shiprocket.co/tracking/{awb_code}"
+
+        print("FINAL SHIPMENT ID:", shipment_id)
+        print("FINAL AWB:", awb_code)
+        print("FINAL COURIER:", courier_name)
+        print("FINAL STATUS:", shiprocket_status)
+        print("FINAL TRACK URL:", tracking_url)
+
+        # -------------------------------
+        # 3) FINAL SAVE
+        # -------------------------------
+        order.shiprocket_shipment_id = str(shipment_id) if shipment_id else None
+        order.awb_code = str(awb_code) if awb_code else None
+        order.courier_name = courier_name if courier_name else None
+        order.tracking_url = tracking_url if tracking_url else None
+        order.shiprocket_status = shiprocket_status if shiprocket_status else None
+
+        # website order status mapping
+        if shiprocket_status:
             s = shiprocket_status.upper()
             if "DELIVERED" in s:
                 order.status = "DELIVERED"
@@ -1775,50 +1864,6 @@ def sync_shiprocket_order(order_db_id):
                 order.status = "CANCELLED"
             elif "PICKUP" in s:
                 order.status = "PICKUP PENDING"
-
-        # -------------------------------
-        # 2) TRACKING API BY SHIPMENT ID
-        # -------------------------------
-        final_shipment_id = order.shiprocket_shipment_id or shipment_id
-
-        if final_shipment_id:
-            track_url_api = f"https://apiv2.shiprocket.in/v1/external/courier/track/shipment/{final_shipment_id}"
-            tr = requests.get(track_url_api, headers=headers, timeout=30)
-            print("SHIPROCKET TRACK RESPONSE:", tr.status_code, tr.text)
-
-            if tr.ok:
-                tdata = tr.json()
-
-                tracking_data = tdata.get("tracking_data", {}) if isinstance(tdata, dict) else {}
-                shipment_track = tracking_data.get("shipment_track", [])
-
-                if shipment_track and isinstance(shipment_track, list):
-                    tfirst = shipment_track[0] or {}
-
-                    awb_code = awb_code or tfirst.get("awb_code") or tfirst.get("awb")
-                    courier_name = courier_name or tfirst.get("courier_name") or tfirst.get("courier")
-                    shiprocket_status = shiprocket_status or tfirst.get("current_status") or tfirst.get("status")
-
-                tracking_url = (
-                    tracking_url
-                    or tracking_data.get("track_url")
-                    or tracking_data.get("tracking_url")
-                )
-
-        # -------------------------------
-        # 3) FINAL SAVE
-        # -------------------------------
-        if awb_code:
-            order.awb_code = str(awb_code)
-
-        if courier_name:
-            order.courier_name = courier_name
-
-        if tracking_url:
-            order.tracking_url = tracking_url
-
-        if shiprocket_status:
-            order.shiprocket_status = shiprocket_status
 
         db.session.commit()
         flash("Shiprocket details synced successfully ✅", "success")
