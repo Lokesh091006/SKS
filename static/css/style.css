@@ -3636,3 +3636,55 @@ body {
     opacity:0.6;
     cursor:not-allowed;
 }
+/* ===== COLOR VARIANTS ===== */
+
+.color-section{
+    margin: 14px 0 18px;
+}
+
+.color-section label{
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #222;
+}
+
+.color-options{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.color-chip{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 999px;
+    background: #fff;
+    text-decoration: none;
+    color: #222;
+    transition: 0.2s ease;
+    font-size: 14px;
+}
+
+.color-chip:hover{
+    border-color: #ff4d8d;
+    color: #ff4d8d;
+}
+
+.color-chip.active{
+    border-color: #ff4d8d;
+    background: #fff0f6;
+    color: #ff2e63;
+    font-weight: bold;
+}
+
+.color-dot{
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    display: inline-block;
+}

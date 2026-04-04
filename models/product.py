@@ -14,5 +14,5 @@ class Product(db.Model):
     image = db.Column(db.String(200))
     image2 = db.Column(db.String(200))
     image3 = db.Column(db.String(200))
-
+    variant_group = db.Column(db.String(100))
     is_active = db.Column(db.Boolean, default=True)

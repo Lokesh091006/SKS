@@ -1505,6 +1505,8 @@ def add_product():
             stocks = request.form.get("stocks")
             type_ = request.form.get("type")
             brand = request.form.get("brand")
+            color = request.form.get("color")
+            variant_group = request.form.get("variant_group")
             description = request.form.get("description")
 
             img1 = request.files.get("image1")
@@ -1579,7 +1581,9 @@ def add_product():
                 category=category,
                 sizes=sizes,
                 type=type_,
+                color=color,
                 brand=brand,
+                variant_group=variant_group,
                 description=description,
                 image=img1_path,
                 image2=img2_path,
@@ -2502,13 +2506,24 @@ def confirm_order():
     db.session.commit()
     return redirect("/payment-success")
 
-
 @app.route("/product/<int:pid>")
 def product_page(pid):
     product = Product.query.filter_by(id=pid, is_active=True).first_or_404()
     sizes = ProductSize.query.filter_by(product_id=pid).all()
 
-    return render_template("product.html", product=product, sizes=sizes)
+    related_colors = []
+    if product.variant_group:
+        related_colors = Product.query.filter(
+            Product.variant_group == product.variant_group,
+            Product.is_active == True
+        ).order_by(Product.id.asc()).all()
+
+    return render_template(
+        "product.html",
+        product=product,
+        sizes=sizes,
+        related_colors=related_colors
+    )
 
 @app.route("/quick-pay/<int:pid>")
 def quick_pay(pid):
