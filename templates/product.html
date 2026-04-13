@@ -55,21 +55,22 @@
 
         <h1 class="product-title">{{ product.name }}</h1>
         <p class="product-price">₹ {{ product.price }}</p>
-        {% if related_colors and related_colors|length > 1 %}
+       {% if product.color and product.color.strip() and related_colors %}
 <div class="color-section">
     <label>Available Colors:</label>
     <div class="color-options">
         {% for item in related_colors %}
+            {% if item.color and item.color.strip() %}
             <a href="{{ url_for('product_page', pid=item.id) }}"
                class="color-chip {% if item.id == product.id %}active{% endif %}">
-                <span class="color-dot" style="background: {{ item.color|lower }};"></span>
+                <span class="color-dot" style="background: {{ item.color.strip().lower() }};"></span>
                 <span>{{ item.color }}</span>
             </a>
+            {% endif %}
         {% endfor %}
     </div>
 </div>
 {% endif %}
-
         {% set valid_sizes = sizes | selectattr("size") | list %}
         {% set has_sizes = valid_sizes|length > 0 %}
         {% set all_out = has_sizes and (sizes|selectattr("stock", "equalto", 0)|list|length == sizes|length) %}

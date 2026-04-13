@@ -2512,11 +2512,18 @@ def product_page(pid):
     sizes = ProductSize.query.filter_by(product_id=pid).all()
 
     related_colors = []
-    if product.variant_group:
-        related_colors = Product.query.filter(
+
+    if product.variant_group and product.variant_group.strip():
+        all_variant_products = Product.query.filter(
             Product.variant_group == product.variant_group,
             Product.is_active == True
         ).order_by(Product.id.asc()).all()
+
+        for item in all_variant_products:
+            color_value = (item.color or "").strip()
+
+            if color_value:   # color empty kakapothe matrame add chesthundi
+                related_colors.append(item)
 
     return render_template(
         "product.html",
