@@ -505,22 +505,6 @@ def imgsrc(path):
 
 FAST2SMS_API_KEY = "U41D0zVLyOfXbVbR1yI95pqxKvcqrgNIo38ZNJ7e01O7wVn6tjAm8p4nSnNa"
 
-with app.app_context():
-    
-    db.create_all()
-
-    if Product.query.count() == 0:
-        sample_products = [
-            Product(name="Men T-Shirt", price=799, category="men", image="images/men1.jpg"),
-            Product(name="Men Jeans", price=1299, category="men", image="images/men2.jpg"),
-            Product(name="Men Jacket", price=1799, category="men", image="images/men3.jpg"),
-            Product(name="Women Dress", price=1499, category="women", image="images/women1.jpg"),
-            Product(name="Running Shoes", price=1999, category="shoes", image="images/shoes1.jpg"),
-            Product(name="Men Hoodie", price=1999, category="men", image="images/men4.jpg"),
-
-        ]
-        db.session.add_all(sample_products)
-        db.session.commit()
 
 
 
@@ -2572,4 +2556,6 @@ def terms():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
