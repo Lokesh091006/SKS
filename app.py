@@ -2190,6 +2190,7 @@ def razorpay_verify():
 
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
+
     payload = request.data
     signature = request.headers.get("X-Razorpay-Signature")
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
@@ -2209,37 +2210,18 @@ def razorpay_webhook():
 
     # ================= PAYMENT SUCCESS =================
     if event == "payment.captured":
-        payment = data["payload"]["payment"]["entity"]
 
+        payment = data["payload"]["payment"]["entity"]
         payment_id = payment["id"]
 
-        # ✅ duplicate check
+        print("Payment captured:", payment_id)
+
         existing = Order.query.filter_by(payment_id=payment_id).first()
+
         if existing:
-            print("Already created")
-            return "OK", 200
-
-        notes = payment.get("notes", {})
-        user_id = notes.get("user_id")
-        address_id = notes.get("address_id")
-
-        if not user_id:
-            print("Missing user_id")
-            return "OK", 200
-
-        new_order = Order(
-            order_id="SKS" + str(int(time.time() * 1000)),
-            user_id=int(user_id),
-            address_id=int(address_id) if address_id else None,
-            payment_method="razorpay",
-            payment_id=payment_id,
-            status="PLACED"
-        )
-
-        db.session.add(new_order)
-        db.session.commit()
-
-        print("✅ Order created via webhook:", payment_id)
+            print("✅ Order already exists")
+        else:
+            print("⚠️ No order found (user may have left page)")
 
     # ================= REFUND SUCCESS =================
     elif event == "refund.processed":
@@ -2247,7 +2229,7 @@ def razorpay_webhook():
         refund = data["payload"]["refund"]["entity"]
 
         payment_id = refund["payment_id"]
-        amount = refund["amount"] / 100  # paise → rupees
+        amount = refund["amount"] / 100
 
         order = Order.query.filter_by(payment_id=payment_id).first()
 
@@ -2262,7 +2244,7 @@ def razorpay_webhook():
                     amount
                 )
 
-                print("✅ Refund WhatsApp sent:", user.mobile)
+                print("✅ Refund WhatsApp sent")
 
     return "OK", 200
 
