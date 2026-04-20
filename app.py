@@ -223,6 +223,20 @@ def send_whatsapp_delivered(mobile, customer_name, order_id):
     )
 
 
+def send_whatsapp_refund(mobile, customer_name, order_id, amount):
+    components = {
+        "body_1": {"type": "text", "value": customer_name},
+        "body_2": {"type": "text", "value": order_id},
+        "body_3": {"type": "text", "value": str(amount)},
+    }
+
+    return send_msg91_whatsapp_template(
+        "order_refund_kalasilks",   # 👈 template name (MSG91 lo create cheyali)
+        mobile,
+        components
+    )
+
+
 
 
 
@@ -481,6 +495,63 @@ def create_shiprocket_order(main_order_id, user, address, cart_items, payment_me
         return {"ok": False, "error": data}
 
     return {"ok": True, "data": data}
+
+
+from datetime import datetime, timedelta
+
+def process_shiprocket_orders():
+    print("Checking pending orders...")
+
+    orders = Order.query.filter_by(status="PLACED").all()
+
+    for order in orders:
+
+        # skip cancelled
+        if order.status == "CANCELLED":
+            continue
+
+        # skip already created
+        if order.shiprocket_order_id:
+            continue
+
+        if not order.created_at:
+            continue
+
+        time_diff = datetime.utcnow() - order.created_at
+
+        # 🔥 12hrs condition
+        if time_diff >= timedelta(hours=12):
+
+            try:
+                user = User.query.get(order.user_id)
+                address = Address.query.get(order.address_id)
+
+                result = create_shiprocket_order(
+                    main_order_id=order.order_id,
+                    user=user,
+                    address=address,
+                    cart_items=[{
+                        "product": order.product,
+                        "qty": 1,
+                        "size": order.size
+                    }],
+                    payment_method=order.payment_method,
+                    total_amount=order.product.price if order.product else 0
+                )
+
+                if result.get("ok"):
+                    data = result.get("data", {})
+
+                    order.shiprocket_order_id = str(data.get("order_id"))
+                    order.shiprocket_status = "NEW"
+                    order.status = "CONFIRMED"
+
+                    db.session.commit()
+
+                    print("✅ Shiprocket created:", order.order_id)
+
+            except Exception as e:
+                print("Shiprocket error:", e)
 
 
 
@@ -2096,6 +2167,7 @@ def razorpay_webhook():
     data = request.json
     event = data.get("event")
 
+    # ================= PAYMENT SUCCESS =================
     if event == "payment.captured":
         payment = data["payload"]["payment"]["entity"]
 
@@ -2129,6 +2201,29 @@ def razorpay_webhook():
 
         print("✅ Order created via webhook:", payment_id)
 
+    # ================= REFUND SUCCESS =================
+    elif event == "refund.processed":
+
+        refund = data["payload"]["refund"]["entity"]
+
+        payment_id = refund["payment_id"]
+        amount = refund["amount"] / 100  # paise → rupees
+
+        order = Order.query.filter_by(payment_id=payment_id).first()
+
+        if order:
+            user = User.query.get(order.user_id)
+
+            if user and user.mobile:
+                send_whatsapp_refund(
+                    user.mobile,
+                    user.username or "Customer",
+                    order.order_id,
+                    amount
+                )
+
+                print("✅ Refund WhatsApp sent:", user.mobile)
+
     return "OK", 200
 
 @app.route("/upi-details", methods=["GET", "POST"])
@@ -2145,14 +2240,13 @@ def upi_details():
 def upi_processing():
     return render_template("upi_processing.html", upi_id=session.get("upi_id"), amount=session.get("final_amount"))
 
-from sqlalchemy.orm import joinedload
 
 from urllib.parse import quote
+
 @app.route("/payment-success")
 def payment_success():
     if "user_id" not in session:
         return redirect("/login")
-
 
     # ✅ DUPLICATE ORDER PROTECTION
     existing_order = Order.query.filter_by(
@@ -2254,57 +2348,7 @@ def payment_success():
 
     final_amount = session.get("final_amount", 0)
 
-    # ---------------- SHIPROCKET CREATE ORDER ----------------
-    try:
-        user = User.query.get(session["user_id"])
-        address = Address.query.get(address_id)
-
-        master_order_id = orders[0].order_id if orders else "SKSORDER"
-
-        sr_result = create_shiprocket_order(
-            main_order_id=master_order_id,
-            user=user,
-            address=address,
-            cart_items=cart_items,
-            payment_method=payment_method,
-            total_amount=final_amount
-        )
-
-        if sr_result.get("ok"):
-            sr_data = sr_result.get("data", {}) or {}
-
-            shiprocket_order_id = sr_data.get("order_id")
-            shipment_id = sr_data.get("shipment_id")
-            status_text = sr_data.get("status")
-
-            if isinstance(sr_data.get("data"), dict):
-                nested = sr_data.get("data", {})
-
-                if not shiprocket_order_id:
-                    shiprocket_order_id = nested.get("order_id") or nested.get("id")
-
-                if not shipment_id:
-                    shipment_id = nested.get("shipment_id")
-
-                if not status_text:
-                    status_text = nested.get("status")
-
-            status_text = status_text or "NEW"
-
-            for o in orders:
-                o.shiprocket_order_id = str(shiprocket_order_id) if shiprocket_order_id else None
-                o.shiprocket_shipment_id = str(shipment_id) if shipment_id else None
-                o.shiprocket_status = status_text
-
-            db.session.commit()
-            print("SHIPROCKET ORDER SAVED:", shiprocket_order_id, shipment_id, status_text)
-
-        else:
-            print("Shiprocket create failed:", sr_result.get("error"))
-
-    except Exception as e:
-        db.session.rollback()
-        print("Shiprocket integration failed:", e)
+    # ❌ SHIPROCKET REMOVE (12hrs tarvata create chestham)
 
     # ---------------- WHATSAPP / EMAIL ----------------
     try:
@@ -2315,7 +2359,6 @@ def payment_success():
         customer_mobile = user.mobile or ""
         order_no = orders[0].order_id if orders else "SKSORDER"
 
-        # Delivery address text for WhatsApp
         delivery_address_text = ""
         if address:
             delivery_address_text = (
@@ -2325,58 +2368,7 @@ def payment_success():
                 f"{address.state or ''} - {address.pincode or ''}"
             ).strip(", ")
 
-        # Email address block
-        address_html = ""
-        if address:
-            address_html = f"""
-            <div>
-                <b>{address.name or customer_name}</b><br>
-                {address.mobile or customer_mobile}<br>
-                {address.house or ""}<br>
-                {address.street or ""}<br>
-                {address.city or ""}, {address.state or ""} - {address.pincode or ""}
-            </div>
-            """
-
-        items_html = ""
-        for o in orders:
-            product_name = o.product.name if o.product else "Product"
-            product_price = getattr(o.product, "price", 0) if o.product else 0
-
-            product_image_url = "https://www.kalasilks.com/static/images/placeholder.png"
-            if o.product and o.product.image:
-                img = o.product.image.strip()
-                encoded_img = quote(img)
-
-                if img.startswith(("http://", "https://")):
-                    product_image_url = img
-                elif img.startswith("static/"):
-                    product_image_url = f"https://www.kalasilks.com/{encoded_img}"
-                elif img.startswith(("images/", "uploads/")):
-                    product_image_url = f"https://www.kalasilks.com/static/{encoded_img}"
-                else:
-                    product_image_url = f"https://www.kalasilks.com/static/images/{encoded_img}"
-
-            items_html += f"""
-            <table style="width:100%; margin-bottom:18px; border-collapse:collapse;">
-                <tr>
-                    <td style="width:90px; vertical-align:top;">
-                        <img src="{product_image_url}" alt="{product_name}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #333;">
-                    </td>
-                    <td style="vertical-align:top;color:#ffffff;font-size:15px;line-height:1.5;">
-                        <div style="font-weight:bold;">{product_name}</div>
-                        <div style="color:#cccccc;">Size: {o.size or '-'}</div>
-                    </td>
-                    <td style="text-align:right;vertical-align:top;color:#ffffff;font-weight:bold;font-size:15px;">
-                        ₹{product_price}
-                    </td>
-                </tr>
-            </table>
-            """
-
-        orders_link = "https://www.kalasilks.com/my-orders"
-
-        # WhatsApp order confirmation
+        # WhatsApp confirmation
         if customer_mobile and orders:
             first_order = orders[0]
 
@@ -2393,36 +2385,29 @@ def payment_success():
                     o.wa_order_confirm_sent = True
                 db.session.commit()
 
-        # Order email
+        # Email
         if user and user.email:
             send_order_email(
                 user,
                 order_no,
                 final_amount,
-                address_html,
-                items_html,
-                orders_link
+                "",
+                "",
+                "https://www.kalasilks.com/my-orders"
             )
 
     except Exception as e:
         print("Order WhatsApp/Email send failed:", e)
 
     # ---------------- CLEAR SESSION ----------------
-    session.pop("cart", None)
-    session.pop("buy_now_item", None)
-    session.pop("total_after_coupon", None)
-    session.pop("final_amount", None)
-    session.pop("address", None)
-    session.pop("payment_method", None)
-    session.pop("razorpay_order_id", None)
-    session.pop("razorpay_payment_id", None)
+    session.clear()
 
     return render_template(
         "payment_success.html",
         orders=orders,
         final_amount=final_amount
-    )
-    
+    )  
+
 @app.route("/shop")
 def shop():
     q = request.args.get("q", "").strip()
@@ -2536,6 +2521,41 @@ def confirm_order():
     db.session.commit()
     return redirect("/payment-success")
 
+
+from datetime import datetime, timedelta
+
+@app.route("/cancel-order/<order_id>")
+def cancel_order(order_id):
+
+    order = Order.query.filter_by(order_id=order_id).first()
+
+    if not order:
+        return "Order not found ❌"
+
+    # ⏱️ 12hrs check
+    time_diff = datetime.utcnow() - order.created_at
+
+    if time_diff > timedelta(hours=12):
+        return "Cancel time expired ❌"
+
+    # already cancelled check
+    if order.status == "CANCELLED":
+        return "Already cancelled"
+
+    # 🟢 cancel order
+    order.status = "CANCELLED"
+    db.session.commit()
+
+    # 🟢 refund (online payment unte)
+    if order.payment_method == "razorpay" and order.payment_id:
+        try:
+            client.payment.refund(order.payment_id)
+            print("Refund initiated")
+        except Exception as e:
+            print("Refund error:", e)
+
+    return "Order cancelled & refund initiated ✅"
+
 @app.route("/product/<int:pid>")
 def product_page(pid):
     product = Product.query.filter_by(id=pid, is_active=True).first_or_404()
@@ -2604,4 +2624,17 @@ def terms():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+
+    import threading
+    import time
+
+    def run_shiprocket_worker():
+        while True:
+            with app.app_context():
+                process_shiprocket_orders()
+            time.sleep(300)  # every 5 mins
+
+    # ✅ Start background worker
+    threading.Thread(target=run_shiprocket_worker, daemon=True).start()
+
     app.run(debug=True)
