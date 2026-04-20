@@ -1,101 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Edit Stock</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Edit Product</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #f5f5f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-    }
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
 
-    .box {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      width: 350px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+        .container {
+            width: 420px;
+            margin: 50px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0px 5px 15px rgba(0,0,0,0.1);
+        }
 
-    h3 {
-      text-align: center;
-      margin-bottom: 15px;
-    }
+        h2 {
+            text-align: center;
+            margin-bottom: 15px;
+        }
 
-    .product-name {
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 15px;
-    }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
 
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: black;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
 
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 6px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
+        .back {
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
 
-    .hint {
-      font-size: 12px;
-      color: gray;
-      margin-top: 4px;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px;
-      background: black;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      margin-top: 18px;
-      cursor: pointer;
-    }
-
-    .back {
-      display: inline-block;
-      margin-bottom: 10px;
-      text-decoration: none;
-      color: black;
-      font-size: 14px;
-      font-weight: bold;
-    }
-  </style>
+        .hint {
+            font-size: 12px;
+            color: gray;
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="box">
-  <a href="/admin/products" class="back">⬅ Back</a>
+<div class="container">
 
-  <h3>Edit Stock</h3>
-  <div class="product-name">{{ product.name }}</div>
+    <a href="/admin/products" class="back">⬅ Back</a>
 
-  <form method="POST">
-    <label>Sizes</label>
-    <input name="sizes" value="{{ sizes_text }}" readonly>
-    <div class="hint">Ivi current sizes</div>
+    <h2>Edit Product</h2>
 
-    <label>Stocks</label>
-    <input name="stocks" value="{{ stocks_text }}" placeholder="2,5,0">
-    <div class="hint">Sizes order ki match ayela stocks ivvali</div>
+    <form method="POST" enctype="multipart/form-data">
 
-    <button type="submit">Update Stock</button>
-  </form>
+        <!-- Name -->
+        <input type="text" name="name" value="{{ product.name }}" required>
+
+        <!-- Type -->
+        <label>Product Type</label>
+        <select name="type" required>
+            <option value="tshirt" {% if product.type=='tshirt' %}selected{% endif %}>T-Shirt</option>
+            <option value="shirt" {% if product.type=='shirt' %}selected{% endif %}>Shirt</option>
+            <option value="jeans" {% if product.type=='jeans' %}selected{% endif %}>Jeans</option>
+            <option value="Cottonpants" {% if product.type=='Cottonpants' %}selected{% endif %}>Cotton Pants</option>
+            <option value="Nightwear" {% if product.type=='Nightwear' %}selected{% endif %}>Night Wear</option>
+            <option value="saree" {% if product.type=='saree' %}selected{% endif %}>Saree</option>
+            <option value="kurti" {% if product.type=='kurti' %}selected{% endif %}>Kurties</option>
+            <option value="legging" {% if product.type=='legging' %}selected{% endif %}>Leggings</option>
+            <option value="chudidar" {% if product.type=='chudidar' %}selected{% endif %}>Chudidars</option>
+            <option value="croptop" {% if product.type=='croptop' %}selected{% endif %}>Crop Tops</option>
+            <option value="innerwear" {% if product.type=='innerwear' %}selected{% endif %}>InnerWear</option>
+            <option value="nighty" {% if product.type=='nighty' %}selected{% endif %}>Nighty</option>
+            <option value="boys" {% if product.type=='boys' %}selected{% endif %}>Boys</option>
+            <option value="girls" {% if product.type=='girls' %}selected{% endif %}>Girls</option>
+            <option value="babywear" {% if product.type=='babywear' %}selected{% endif %}>Baby Wear</option>
+        </select>
+
+        <!-- Price -->
+        <input type="number" name="price" value="{{ product.price }}" required>
+
+        <!-- Category -->
+        <input type="text" name="category" value="{{ product.category }}" required>
+
+        <!-- Brand -->
+        <label>Brand</label>
+        <select name="brand" required>
+            <option value="ramraj" {% if product.brand=='ramraj' %}selected{% endif %}>Ramraj</option>
+            <option value="whitehouse" {% if product.brand=='whitehouse' %}selected{% endif %}>White House</option>
+            <option value="red_white" {% if product.brand=='red_white' %}selected{% endif %}>Red & White</option>
+            <option value="coolcolours" {% if product.brand=='coolcolours' %}selected{% endif %}>Coolcolours</option>
+            <option value="oyemberg" {% if product.brand=='oyemberg' %}selected{% endif %}>Oyemberg</option>
+            <option value="pattusarees" {% if product.brand=='pattusarees' %}selected{% endif %}>Pattu Sarees</option>
+            <option value="cottonsarees" {% if product.brand=='cottonsarees' %}selected{% endif %}>Cotton Sarees</option>
+            <option value="fancysarees" {% if product.brand=='fancysarees' %}selected{% endif %}>Fancy Sarees</option>
+            <option value="syntheticsarees" {% if product.brand=='syntheticsarees' %}selected{% endif %}>Synthetic Sarees</option>
+            <option value="partywear" {% if product.brand=='partywear' %}selected{% endif %}>Party Wear</option>
+            <option value="nightdress" {% if product.brand=='nightdress' %}selected{% endif %}>Night Dress</option>
+        </select>
+
+        <!-- Color -->
+        <input type="text" name="color" value="{{ product.color }}">
+
+        <!-- Variant -->
+        <input type="text" name="variant_group" value="{{ product.variant_group }}" required>
+
+        <!-- Sizes -->
+        <label>Sizes</label>
+        <input name="sizes" value="{{ sizes_text }}" readonly>
+
+        <!-- Stocks -->
+        <label>Stocks</label>
+        <input name="stocks" value="{{ stocks_text }}">
+        <div class="hint">Sizes order ki match ayela ivvali</div>
+
+        <!-- Images -->
+        <label>Change Images (optional)</label>
+        <input type="file" name="image1">
+        <input type="file" name="image2">
+        <input type="file" name="image3">
+
+        <!-- Description -->
+        <textarea name="description">{{ product.description }}</textarea>
+
+        <button type="submit">Update Product 🚀</button>
+
+    </form>
+
 </div>
 
 </body>

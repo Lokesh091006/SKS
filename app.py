@@ -1712,6 +1712,18 @@ def edit_product(id):
     size_rows = ProductSize.query.filter_by(product_id=id).all()
 
     if request.method == "POST":
+
+        # 🔹 BASIC DETAILS UPDATE
+        product.name = request.form.get("name")
+        product.type = request.form.get("type")
+        product.price = request.form.get("price")
+        product.category = request.form.get("category")
+        product.brand = request.form.get("brand")
+        product.color = request.form.get("color")
+        product.variant_group = request.form.get("variant_group")
+        product.description = request.form.get("description")
+
+        # 🔹 STOCK UPDATE
         sizes = product.sizes or ""
         stocks = request.form.get("stocks", "").strip()
 
@@ -1732,12 +1744,35 @@ def edit_product(id):
             )
             db.session.add(ps)
 
+        # 🔹 IMAGE UPDATE (optional)
+        image1 = request.files.get("image1")
+        image2 = request.files.get("image2")
+        image3 = request.files.get("image3")
+
+        if image1 and image1.filename != "":
+            filename1 = secure_filename(image1.filename)
+            image1.save(os.path.join(app.config['UPLOAD_FOLDER'], filename1))
+            product.image1 = filename1
+
+        if image2 and image2.filename != "":
+            filename2 = secure_filename(image2.filename)
+            image2.save(os.path.join(app.config['UPLOAD_FOLDER'], filename2))
+            product.image2 = filename2
+
+        if image3 and image3.filename != "":
+            filename3 = secure_filename(image3.filename)
+            image3.save(os.path.join(app.config['UPLOAD_FOLDER'], filename3))
+            product.image3 = filename3
+
+        # 🔹 VISIBILITY UPDATE
         update_product_visibility(product.id)
+
         db.session.commit()
 
-        flash("Stock updated successfully ✅", "success")
+        flash("Product updated successfully ✅", "success")
         return redirect(url_for("manage_products"))
 
+    # 🔹 PRE-FILL DATA
     sizes_text = ",".join([s.size for s in size_rows])
     stocks_text = ",".join([str(s.stock or 0) for s in size_rows])
 
