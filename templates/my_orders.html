@@ -87,6 +87,7 @@
             </a>
 
             <div class="mt-3 d-grid gap-2">
+
                 <a href="/order/{{ order.id }}" class="btn btn-sm btn-outline-dark">
                     View Details
                 </a>
@@ -96,6 +97,24 @@
                     Track Order
                 </a>
                 {% endif %}
+
+                <!-- 🔥 CANCEL BUTTON -->
+                {% if order.status == "PLACED" and order.created_at %}
+                    {% set can_cancel = (now - order.created_at).total_seconds() <= 43200 %}
+
+                    {% if can_cancel %}
+                        <form method="POST" action="/cancel-order/{{ order.order_id }}">
+    <button type="submit" class="btn btn-sm btn-danger">
+        Cancel Order
+    </button>
+</form>
+                    {% else %}
+                        <div class="text-muted small text-center">
+                            Cancel time expired
+                        </div>
+                    {% endif %}
+                {% endif %}
+
             </div>
 
         </div>

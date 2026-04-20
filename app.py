@@ -951,6 +951,7 @@ def order_detail(id):
     order = Order.query.get_or_404(id)
     return render_template("order_detail.html", order=order)
 
+from datetime import datetime
 
 @app.route("/my-orders")
 def my_orders():
@@ -970,7 +971,11 @@ def my_orders():
 
     print("ORDERS:", orders)
 
-    return render_template("my_orders.html", orders=orders)
+    return render_template(
+        "my_orders.html",   # ⚠️ name match chesuko
+        orders=orders,
+        now=datetime.utcnow()   # 🔥 IMPORTANT
+    )
 
 @app.route("/category/<name>")
 def category(name):
@@ -2559,8 +2564,11 @@ def confirm_order():
 
 from datetime import datetime, timedelta
 
-@app.route("/cancel-order/<order_id>")
+@app.route("/cancel-order/<order_id>", methods=["POST"])
 def cancel_order(order_id):
+
+    if "user_id" not in session:
+        return redirect("/login")
 
     order = Order.query.filter_by(order_id=order_id).first()
 
@@ -2568,6 +2576,9 @@ def cancel_order(order_id):
         return "Order not found ❌"
 
     # ⏱️ 12hrs check
+    if not order.created_at:
+        return "Invalid order ❌"
+
     time_diff = datetime.utcnow() - order.created_at
 
     if time_diff > timedelta(hours=12):
@@ -2575,22 +2586,38 @@ def cancel_order(order_id):
 
     # already cancelled check
     if order.status == "CANCELLED":
-        return "Already cancelled"
+        return redirect(url_for("my_orders"))
 
     # 🟢 cancel order
     order.status = "CANCELLED"
     db.session.commit()
 
-    # 🟢 refund (online payment unte)
+    # 🟢 refund (Razorpay)
     if order.payment_method == "razorpay" and order.payment_id:
         try:
             client.payment.refund(order.payment_id)
             print("Refund initiated")
+
+            
+
+            # 🟢 WhatsApp msg
+            user = User.query.get(order.user_id)
+
+            if user and user.mobile:
+                send_whatsapp_refund(
+                    user.mobile,
+                    user.username or "Customer",
+                    order.order_id,
+                    order.product.price if order.product else 0
+                )
+
         except Exception as e:
             print("Refund error:", e)
+            print("CANCEL HIT:", order_id)
+            print("PAYMENT METHOD:", order.payment_method)
+            print("PAYMENT ID:", order.payment_id) 
 
-    return "Order cancelled & refund initiated ✅"
-
+    return redirect(url_for("my_orders"))
 @app.route("/product/<int:pid>")
 def product_page(pid):
     product = Product.query.filter_by(id=pid, is_active=True).first_or_404()
