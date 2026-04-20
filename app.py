@@ -2023,10 +2023,15 @@ def razorpay_checkout():
     amount_paise = int(float(amount) * 100)
 
     razorpay_order = client.order.create({
-        "amount": amount_paise,
-        "currency": "INR",
-        "payment_capture": 1
-    })
+    "amount": amount_paise,
+    "currency": "INR",
+    "payment_capture": 1,
+    "notes": {
+        "user_id": str(session["user_id"]),
+        "address_id": str(session.get("address", "")),
+        "payment_method": "razorpay"
+    }
+})
 
     session["razorpay_order_id"] = razorpay_order["id"]
 
@@ -2086,13 +2091,44 @@ def razorpay_webhook():
         )
     except Exception as e:
         print("Webhook verify failed:", e)
-        return "Invalid webhook", 400
+        return "Invalid", 400
 
     data = request.json
     event = data.get("event")
-    print("RAZORPAY WEBHOOK EVENT:", event)
 
-    # later idhi use chesi backup shipment creation cheyyachu
+    if event == "payment.captured":
+        payment = data["payload"]["payment"]["entity"]
+
+        payment_id = payment["id"]
+
+        # ✅ duplicate check
+        existing = Order.query.filter_by(payment_id=payment_id).first()
+        if existing:
+            print("Already created")
+            return "OK", 200
+
+        notes = payment.get("notes", {})
+        user_id = notes.get("user_id")
+        address_id = notes.get("address_id")
+
+        if not user_id:
+            print("Missing user_id")
+            return "OK", 200
+
+        new_order = Order(
+            order_id="SKS" + str(int(time.time() * 1000)),
+            user_id=int(user_id),
+            address_id=int(address_id) if address_id else None,
+            payment_method="razorpay",
+            payment_id=payment_id,
+            status="PLACED"
+        )
+
+        db.session.add(new_order)
+        db.session.commit()
+
+        print("✅ Order created via webhook:", payment_id)
+
     return "OK", 200
 
 @app.route("/upi-details", methods=["GET", "POST"])
@@ -2116,6 +2152,16 @@ from urllib.parse import quote
 def payment_success():
     if "user_id" not in session:
         return redirect("/login")
+
+
+    # ✅ DUPLICATE ORDER PROTECTION
+    existing_order = Order.query.filter_by(
+        payment_id=session.get("razorpay_payment_id")
+    ).first()
+
+    if existing_order:
+        print("Duplicate order avoided")
+        return redirect(url_for("my_orders"))
 
     cart = session.get("cart", {})
     buy_now_item = session.get("buy_now_item")
