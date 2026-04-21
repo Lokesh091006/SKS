@@ -427,20 +427,21 @@ body{
 
         {% if products and products|length > 0 %}
         <div class="products">
-            {% for p in products %}
-            <div class="card">
-                <a href="{{ url_for('product_page', pid=p.id) }}">
-                    {% if p.image and p.image.startswith('http') %}
-                        <img src="{{ p.image }}" class="product-img">
-                    {% else %}
-                        <img src="{{ p.image|imgsrc }}" class="product-img">
-                    {% endif %}
-                    <h4>{{ p.name }}</h4>
-                    <b>₹{{ p.price }}</b>
-                </a>
-            </div>
-            {% endfor %}
-        </div>
+    {% for p in products %}
+    <div class="card">
+        <a href="{{ url_for('product_page', pid=p.id) }}">
+
+            <img src="{{ p.image.replace('/upload/', '/upload/w_400,q_auto,f_auto/') }}" 
+                 class="product-img" 
+                 loading="lazy">
+
+            <h4>{{ p.name }}</h4>
+            <b>₹{{ p.price }}</b>
+
+        </a>
+    </div>
+    {% endfor %}
+</div>
         {% else %}
         <div style="padding:40px; text-align:center; background:white; border-radius:12px;">
             <h3>❌ No products found</h3>
