@@ -502,22 +502,20 @@ from datetime import datetime, timedelta
 def process_shiprocket_orders():
     print("Checking pending orders...")
 
-    orders = Order.query.filter_by(status="PLACED").all()
+    orders = Order.query.filter(
+        Order.status == "PLACED",
+        Order.shiprocket_order_id == None
+    ).all()
 
     for order in orders:
-
-        # skip cancelled
-        if order.status == "CANCELLED":
-            continue
-
-        # skip already created
-        if order.shiprocket_order_id:
-            continue
 
         if not order.created_at:
             continue
 
-        time_diff = datetime.utcnow() - order.created_at
+        time_diff = datetime.now() - order.created_at
+
+        print("Order:", order.order_id)
+        print("Time diff:", time_diff)
 
         # 🔥 12hrs condition
         if time_diff >= timedelta(hours=12):
@@ -538,6 +536,8 @@ def process_shiprocket_orders():
                     payment_method=order.payment_method,
                     total_amount=order.product.price if order.product else 0
                 )
+
+                print("Shiprocket response:", result)
 
                 if result.get("ok"):
                     data = result.get("data", {})
@@ -2664,6 +2664,11 @@ def refund():
 def terms():
     return render_template("terms.html")
 
+
+@app.route("/run-shiprocket")
+def run_shiprocket():
+    process_shiprocket_orders()
+    return "Shiprocket checked ✅"
 
 if __name__ == "__main__":
     with app.app_context():
