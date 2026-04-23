@@ -110,10 +110,33 @@
 {% endwith %}
 
 <div class="topbar">
-  <a href="/admin">⬅ Back</a>
+  <a href="/admin/dashboard">⬅ Back</a>
   <h2>🛠 Manage Products</h2>
   <a href="/">🏠 Home</a>
 </div>
+<form method="GET" action="/admin/products"  style="margin-top:10px; text-align:center;">
+  <input type="text" name="search" placeholder="Search product..."
+    value="{{ request.args.get('search','') }}"
+    style="
+      padding:8px;
+      width:60%;
+      max-width:300px;
+      border-radius:6px;
+      border:1px solid #ccc;
+    ">
+    
+  <button type="submit"
+    style="
+      padding:8px 12px;
+      border:none;
+      background:black;
+      color:white;
+      border-radius:6px;
+      cursor:pointer;
+    ">
+    Search
+  </button>
+</form>
 
 <div class="grid">
 {% for p in products %}

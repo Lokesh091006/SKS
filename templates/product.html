@@ -110,11 +110,8 @@
 
         <div class="qty-box">
             <label for="qty">Quantity</label>
-            <select id="qty">
-                {% for i in range(1,6) %}
-                    <option value="{{ i }}">{{ i }}</option>
-                {% endfor %}
-            </select>
+            <select id="qty"></select>
+<p id="stockText" style="color:red; margin-top:5px;"></p>
         </div>
 
         <div class="product-buttons">
@@ -144,9 +141,19 @@
 
 </section>
 
+
 {% include "footer.html" %}
 
 <script>
+
+
+const sizeStockMap = {
+    {% for s in sizes %}
+        "{{ s.size }}": {{ s.stock }},
+    {% endfor %}
+};
+
+
 document.addEventListener("DOMContentLoaded", function () {
 
     // ===== SLIDER =====
@@ -175,15 +182,33 @@ document.addEventListener("DOMContentLoaded", function () {
     const hasSizes = sizeEls.length > 0;
 
     sizeEls.forEach(size => {
-        size.addEventListener("click", () => {
-            if (size.classList.contains("sold")) return;
+    size.addEventListener("click", () => {
+        if (size.classList.contains("sold")) return;
 
-            sizeEls.forEach(s => s.classList.remove("active"));
-            size.classList.add("active");
-            hiddenInput.value = size.innerText.replace(" ❌", "").trim();
-        });
+        sizeEls.forEach(s => s.classList.remove("active"));
+        size.classList.add("active");
+
+        let selected = size.innerText.replace(" ❌", "").trim();
+        hiddenInput.value = selected;
+
+        // 🔥 stock fetch
+        let stock = sizeStockMap[selected];
+
+        const qtyEl = document.getElementById("qty");
+        qtyEl.innerHTML = "";
+
+        // 🔥 qty options create (stock varaku matrame)
+        for (let i = 1; i <= stock; i++) {
+            let option = document.createElement("option");
+            option.value = i;
+            option.text = i;
+            qtyEl.appendChild(option);
+        }
+
+        // 🔥 stock text show
+        document.getElementById("stockText").innerText = "Only " + stock + " left";
     });
-
+});
     // ===== BUTTONS =====
     const addToCartBtn = document.getElementById("addToCartBtn");
     const buyNowBtn = document.getElementById("buyNowBtn");
@@ -261,6 +286,19 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 });
+
+
+if (!hasSizes) {
+    const qtyEl = document.getElementById("qty");
+    qtyEl.innerHTML = "";
+
+    for (let i = 1; i <= 5; i++) {
+        let option = document.createElement("option");
+        option.value = i;
+        option.text = i;
+        qtyEl.appendChild(option);
+    }
+}
 </script>
 
 </body>

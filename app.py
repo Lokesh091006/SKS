@@ -1121,13 +1121,20 @@ def live_search():
 
 
 
+
 @app.route("/cart")
 def cart():
+
+    # 🔥 VERY IMPORTANT FIX
+    session.pop("buy_now_item", None)
+
     cart = session.get("cart", {})
     cart_items = []
     total = 0
 
     for key, item in cart.items():
+
+        # 🔹 split product_id & size
         if "_" in key:
             pid, size = key.split("_", 1)
         else:
@@ -1137,23 +1144,40 @@ def cart():
             else:
                 size = None
 
+        # 🔹 product fetch
         product = Product.query.filter_by(id=int(pid), is_active=True).first()
         if not product:
             continue
 
+        # 🔹 quantity
         if isinstance(item, dict):
             qty = item.get("qty", 1)
         else:
             qty = item
 
+        # 🔹 subtotal
         subtotal = product.price * qty
         total += subtotal
 
+        # 🔥 STOCK FETCH
+        stock = None
+
+        if size:
+            size_obj = ProductSize.query.filter_by(
+                product_id=int(pid),
+                size=size
+            ).first()
+
+            if size_obj:
+                stock = size_obj.stock
+
+        # 🔹 append
         cart_items.append({
             "product": product,
             "qty": qty,
             "size": size,
-            "subtotal": subtotal
+            "subtotal": subtotal,
+            "stock": stock
         })
 
     final_amount = total
@@ -1178,22 +1202,29 @@ def clear_cart():
 
 @app.route("/add/<int:product_id>")
 def add_to_cart(product_id):
+
     cart = session.get("cart", {})
     pid = str(product_id)
 
+    # 🔹 size
     size = (request.args.get("size") or "").strip()
-    qty = int(request.args.get("qty", 1))
+    size = size if size else "nosize"
 
+    # 🔥 SAFE QTY
+    qty_str = request.args.get("qty")
+    qty = int(qty_str) if qty_str and qty_str.isdigit() else 1
+
+    # 🔹 product check
     product = Product.query.filter_by(id=product_id, is_active=True).first()
     if not product:
         flash("This product is unavailable ❌", "error")
         return redirect(request.referrer or "/")
 
+    # 🔹 size logic
     all_sizes = ProductSize.query.filter_by(product_id=product_id).all()
     has_real_sizes = any((s.size or "").strip() for s in all_sizes)
 
-    # size compulsory only if product really has sizes
-    if has_real_sizes and not size:
+    if has_real_sizes and size == "nosize":
         flash("Please select a size before adding to cart!", "error")
         return redirect(request.referrer or "/")
 
@@ -1213,20 +1244,22 @@ def add_to_cart(product_id):
             flash(f"Only {size_item.stock} item(s) available ⚠️", "error")
             return redirect(request.referrer or "/")
 
-    cart_key = f"{pid}_{size}" if size else pid
+    # 🔥 KEY ALWAYS SAME FORMAT
+    cart_key = f"{pid}_{size}"
 
     if cart_key in cart:
         current_qty = cart[cart_key].get("qty", 1)
 
         if has_real_sizes and current_qty + qty > size_item.stock:
-            flash("Maximum stock reached ⚠️", "error")
+            flash(f"Maximum {size_item.stock} items allowed ⚠️", "error")
             return redirect(request.referrer or "/")
 
         cart[cart_key]["qty"] = current_qty + qty
+
     else:
         cart[cart_key] = {
             "qty": qty,
-            "size": size if size else None
+            "size": None if size == "nosize" else size
         }
 
     session["cart"] = cart
@@ -1236,13 +1269,20 @@ def add_to_cart(product_id):
 
 @app.route("/buy-now/<int:product_id>")
 def buy_now(product_id):
+
     product = Product.query.filter_by(id=product_id, is_active=True).first()
     if not product:
         flash("This product is unavailable ❌", "error")
         return redirect(url_for("home"))
 
     size = (request.args.get("size") or "").strip()
-    qty = int(request.args.get("qty", 1))
+
+    # ✅ SAFE QTY FIX
+    qty_str = request.args.get("qty")
+    if not qty_str or not qty_str.isdigit():
+        qty = 1
+    else:
+        qty = int(qty_str)
 
     all_sizes = ProductSize.query.filter_by(product_id=product_id).all()
     has_real_sizes = any((s.size or "").strip() for s in all_sizes)
@@ -1284,10 +1324,30 @@ def increase(product_id, size):
     cart = session.get("cart", {})
     key = f"{product_id}_{size}"
 
-    if key in cart:
-        cart[key]["qty"] += 1
+    if key not in cart:
+        return redirect(url_for("cart"))
 
+    # 🔥 current qty
+    current_qty = cart[key]["qty"]
+
+    # 🔥 stock fetch
+    size_obj = ProductSize.query.filter_by(
+        product_id=product_id,
+        size=size
+    ).first()
+
+    if not size_obj:
+        return redirect(url_for("cart"))
+
+    # 🔥 MAIN LOGIC
+    if current_qty >= size_obj.stock:
+        flash(f"Only {size_obj.stock} item(s) available ⚠️", "error")
+        return redirect(url_for("cart"))
+
+    # ✅ safe to increase
+    cart[key]["qty"] += 1
     session["cart"] = cart
+
     return redirect(url_for("cart"))
 
 
@@ -1306,6 +1366,36 @@ def decrease(product_id, size):
     return redirect(url_for("cart"))
 
 
+
+# 🔥 NO SIZE - INCREASE
+@app.route("/increase/<int:product_id>")
+def increase_no_size(product_id):
+    cart = session.get("cart", {})
+    key = str(product_id)
+
+    if key in cart:
+        cart[key]["qty"] += 1
+
+    session["cart"] = cart
+    return redirect(url_for("cart"))
+
+
+# 🔥 NO SIZE - DECREASE
+@app.route("/decrease/<int:product_id>")
+def decrease_no_size(product_id):
+    cart = session.get("cart", {})
+    key = str(product_id)
+
+    if key in cart:
+        if cart[key]["qty"] > 1:
+            cart[key]["qty"] -= 1
+        else:
+            del cart[key]
+
+    session["cart"] = cart
+    return redirect(url_for("cart"))
+
+    
 @app.route("/address", methods=["GET", "POST"])
 def address():
     if "user_id" not in session:
@@ -1685,7 +1775,16 @@ def add_product():
 @app.route("/admin/products")
 @role_required("admin")
 def manage_products():
-    products = Product.query.all()
+    print("🔥 ROUTE HIT")
+    search = request.args.get("search")
+
+    if search:
+        products = Product.query.filter(
+            Product.name.ilike(f"%{search}%")
+        ).all()
+    else:
+        products = Product.query.all()
+
     return render_template("admin/manage_products.html", products=products)
 
 @app.route("/admin/delete-product/<int:id>", methods=["POST"])

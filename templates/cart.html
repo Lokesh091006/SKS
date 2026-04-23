@@ -27,10 +27,22 @@
         <img src="{{ item.product.image|imgsrc }}" class="cart-img">
     {% endif %}
 
-    <div>
-        <h4>{{ item.product.name }}</h4>
-        <p class="size-text">Size: {{ item.size }}</p>
-    </div>
+   <div>
+    <h4>{{ item.product.name }}</h4>
+    <p class="size-text">Size: {{ item.size }}</p>
+
+    {% if item.stock %}
+        <p style="color:red; font-size:13px;">
+            Only {{ item.stock }} left
+        </p>
+    {% endif %}
+
+    {% if item.stock and item.qty >= item.stock %}
+        <p style="color:red; font-weight:bold;">
+            Max stock reached ⚠️
+        </p>
+    {% endif %}
+</div>
 </td>
 
     <td>₹{{ item.product.price }}</td>
@@ -38,10 +50,19 @@
     <td>
         <div class="qty-box">
            
-           <a href="{{ url_for('decrease', product_id=item.product.id, size=item.size) }}">-</a>
+           {% if item.size %}
+    <a href="{{ url_for('decrease', product_id=item.product.id, size=item.size) }}">-</a>
+{% else %}
+    <a href="{{ url_for('decrease_no_size', product_id=item.product.id) }}">-</a>
+{% endif %}
 
-            <span>{{ item.qty }}</span>
-            <a href="{{ url_for('increase', product_id=item.product.id, size=item.size) }}">+</a>
+<span>{{ item.qty }}</span>
+
+{% if item.size %}
+    <a href="{{ url_for('increase', product_id=item.product.id, size=item.size) }}">+</a>
+{% else %}
+    <a href="{{ url_for('increase_no_size', product_id=item.product.id) }}">+</a>
+{% endif %}
         </div>
     </td>
 
