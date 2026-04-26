@@ -6,7 +6,7 @@ import razorpay
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
-from models.product import Product
+from models.product import Product, TempOrder
 from models.user import User
 from models.address import Address
 from models.order import Order
@@ -2232,17 +2232,29 @@ def razorpay_checkout():
 
     amount_paise = int(float(amount) * 100)
 
+    # ✅ CREATE RAZORPAY ORDER
     razorpay_order = client.order.create({
-    "amount": amount_paise,
-    "currency": "INR",
-    "payment_capture": 1,
-    "notes": {
-        "user_id": str(session["user_id"]),
-        "address_id": str(session.get("address", "")),
-        "payment_method": "razorpay"
-    }
-})
+        "amount": amount_paise,
+        "currency": "INR",
+        "payment_capture": 1,
+        "notes": {
+            "user_id": str(session["user_id"]),
+            "address_id": str(session.get("address", "")),
+            "payment_method": "razorpay"
+        }
+    })
 
+    # 🔥 SAVE TEMP ORDER (IMPORTANT)
+    temp = TempOrder(
+        user_id=session["user_id"],
+        razorpay_order_id=razorpay_order["id"],
+        total_amount=amount,
+        address=session.get("address")
+    )
+    db.session.add(temp)
+    db.session.commit()
+
+    # ✅ SAVE IN SESSION (optional but ok)
     session["razorpay_order_id"] = razorpay_order["id"]
 
     user = User.query.get(session["user_id"])
@@ -2254,7 +2266,6 @@ def razorpay_checkout():
         order_id=razorpay_order["id"],
         user=user
     )
-
 @app.route("/razorpay-verify", methods=["POST"])
 def razorpay_verify():
     if "user_id" not in session:
@@ -2312,15 +2323,45 @@ def razorpay_webhook():
 
         payment = data["payload"]["payment"]["entity"]
         payment_id = payment["id"]
+        razorpay_order_id = payment["order_id"]
 
         print("Payment captured:", payment_id)
 
-        existing = Order.query.filter_by(payment_id=payment_id).first()
+        # 🔍 TEMP ORDER FETCH
+        temp = TempOrder.query.filter_by(
+            razorpay_order_id=razorpay_order_id
+        ).first()
+
+        if not temp:
+            print("❌ TEMP ORDER NOT FOUND")
+            return "OK", 200
+
+        # 🔁 already created check
+        existing = Order.query.filter_by(
+            razorpay_payment_id=payment_id
+        ).first()
 
         if existing:
             print("✅ Order already exists")
-        else:
-            print("⚠️ No order found (user may have left page)")
+            return "OK", 200
+
+        # ✅ CREATE REAL ORDER
+        new_order = Order(
+            user_id=temp.user_id,
+            total_amount=temp.total_amount,
+            payment_method="razorpay",
+            razorpay_payment_id=payment_id,
+            status="paid"
+        )
+
+        db.session.add(new_order)
+
+        # 🧹 DELETE TEMP ORDER
+        db.session.delete(temp)
+
+        db.session.commit()
+
+        print("✅ ORDER CREATED SUCCESS")
 
     # ================= REFUND SUCCESS =================
     elif event == "refund.processed":
@@ -2330,7 +2371,9 @@ def razorpay_webhook():
         payment_id = refund["payment_id"]
         amount = refund["amount"] / 100
 
-        order = Order.query.filter_by(payment_id=payment_id).first()
+        order = Order.query.filter_by(
+            razorpay_payment_id=payment_id
+        ).first()
 
         if order:
             user = User.query.get(order.user_id)
@@ -2339,14 +2382,14 @@ def razorpay_webhook():
                 send_whatsapp_refund(
                     user.mobile,
                     user.username or "Customer",
-                    order.order_id,
+                    order.id,
                     amount
                 )
 
                 print("✅ Refund WhatsApp sent")
 
-    return "OK", 200
-
+    return "OK", 200 
+    
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":

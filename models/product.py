@@ -16,3 +16,14 @@ class Product(db.Model):
     image3 = db.Column(db.String(200))
     variant_group = db.Column(db.String(100))
     is_active = db.Column(db.Boolean, default=True)
+
+
+# 🔥 ADD THIS (VERY IMPORTANT)
+class TempOrder(db.Model):
+    __tablename__ = "temp_order"   # 🔥 must match Supabase table name
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer)
+    razorpay_order_id = db.Column(db.String(100))
+    total_amount = db.Column(db.Integer)
+    address = db.Column(db.Text)
