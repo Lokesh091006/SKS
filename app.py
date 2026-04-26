@@ -2297,7 +2297,6 @@ def razorpay_verify():
         print("RAZORPAY VERIFY ERROR:", e)
         return "Payment verification failed ❌", 400
 
-
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
 
@@ -2305,6 +2304,7 @@ def razorpay_webhook():
     signature = request.headers.get("X-Razorpay-Signature")
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
+    # 🔐 Verify webhook
     try:
         client.utility.verify_webhook_signature(
             payload.decode("utf-8"),
@@ -2312,7 +2312,7 @@ def razorpay_webhook():
             secret
         )
     except Exception as e:
-        print("Webhook verify failed:", e)
+        print("❌ Webhook verify failed:", e)
         return "Invalid", 400
 
     data = request.json
@@ -2322,74 +2322,54 @@ def razorpay_webhook():
     if event == "payment.captured":
 
         payment = data["payload"]["payment"]["entity"]
-        payment_id = payment["id"]
-        razorpay_order_id = payment["order_id"]
+        payment_id = payment.get("id")
 
-        print("Payment captured:", payment_id)
+        print("💰 Payment captured:", payment_id)
 
-        # 🔍 TEMP ORDER FETCH
-        temp = TempOrder.query.filter_by(
-            razorpay_order_id=razorpay_order_id
-        ).first()
-
-        if not temp:
-            print("❌ TEMP ORDER NOT FOUND")
-            return "OK", 200
-
-        # 🔁 already created check
-        existing = Order.query.filter_by(
-            razorpay_payment_id=payment_id
-        ).first()
+        # 🔍 check already exists
+        existing = Order.query.filter_by(payment_id=payment_id).first()
 
         if existing:
             print("✅ Order already exists")
             return "OK", 200
 
-        # ✅ CREATE REAL ORDER
+        print("🔥 Creating order from webhook")
+
+        # 🧠 safe notes
+        notes = payment.get("notes", {})
+
+        try:
+            user_id = int(notes.get("user_id", 0))
+            address_id = int(notes.get("address_id", 0))
+        except:
+            print("❌ Invalid notes data")
+            return "OK", 200
+
+        # ⚠️ fallback product (temporary)
+        product = Product.query.first()
+
+        if not product:
+            print("❌ No product found in DB")
+            return "OK", 200
+
+        # 🆕 create order
         new_order = Order(
-            user_id=temp.user_id,
-            total_amount=temp.total_amount,
+            order_id="ORD" + str(int(time.time())),
+            user_id=user_id,
+            product_id=product.id,  # temporary fallback
+            address_id=address_id,
             payment_method="razorpay",
-            razorpay_payment_id=payment_id,
-            status="paid"
+            payment_id=payment_id,
+            status="PLACED"
         )
 
         db.session.add(new_order)
-
-        # 🧹 DELETE TEMP ORDER
-        db.session.delete(temp)
-
         db.session.commit()
 
-        print("✅ ORDER CREATED SUCCESS")
+        print("✅ Order created from webhook")
 
-    # ================= REFUND SUCCESS =================
-    elif event == "refund.processed":
+    return "OK", 200
 
-        refund = data["payload"]["refund"]["entity"]
-
-        payment_id = refund["payment_id"]
-        amount = refund["amount"] / 100
-
-        order = Order.query.filter_by(
-            razorpay_payment_id=payment_id
-        ).first()
-
-        if order:
-            user = User.query.get(order.user_id)
-
-            if user and user.mobile:
-                send_whatsapp_refund(
-                    user.mobile,
-                    user.username or "Customer",
-                    order.id,
-                    amount
-                )
-
-                print("✅ Refund WhatsApp sent")
-
-    return "OK", 200 
-    
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
