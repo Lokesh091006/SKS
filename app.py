@@ -2318,7 +2318,6 @@ def razorpay_webhook():
     data = request.json
     event = data.get("event")
 
-    # ================= PAYMENT SUCCESS =================
     if event == "payment.captured":
 
         payment = data["payload"]["payment"]["entity"]
@@ -2326,16 +2325,7 @@ def razorpay_webhook():
 
         print("💰 Payment captured:", payment_id)
 
-        # 🔍 check already exists
-        existing = Order.query.filter_by(payment_id=payment_id).first()
-
-        if existing:
-            print("✅ Order already exists")
-            return "OK", 200
-
-        print("🔥 Creating order from webhook")
-
-        # 🧠 safe notes
+        # 🧠 notes
         notes = payment.get("notes", {})
 
         try:
@@ -2345,28 +2335,36 @@ def razorpay_webhook():
             print("❌ Invalid notes data")
             return "OK", 200
 
-        # ⚠️ fallback product (temporary)
         product = Product.query.first()
-
         if not product:
-            print("❌ No product found in DB")
+            print("❌ No product found")
             return "OK", 200
 
-        # 🆕 create order
-        new_order = Order(
-            order_id="ORD" + str(int(time.time())),
-            user_id=user_id,
-            product_id=product.id,  # temporary fallback
-            address_id=address_id,
-            payment_method="razorpay",
-            payment_id=payment_id,
-            status="PLACED"
-        )
+        try:
+            new_order = Order(
+                order_id="ORD" + str(int(time.time())),
+                user_id=user_id,
+                product_id=product.id,
+                address_id=address_id,
+                payment_method="razorpay",
+                payment_id=payment_id,
+                status="PLACED"
+            )
 
-        db.session.add(new_order)
-        db.session.commit()
+            db.session.add(new_order)
+            db.session.commit()
 
-        print("✅ Order created from webhook")
+            print("✅ Order created")
+
+        except Exception as e:
+            db.session.rollback()
+
+            # 🔥 THIS IS THE REAL FIX
+            if "unique" in str(e).lower():
+                print("⚠️ Duplicate webhook ignored")
+                return "OK", 200
+
+            print("❌ DB Error:", e)
 
     return "OK", 200
 

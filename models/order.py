@@ -28,7 +28,7 @@ class Order(db.Model):
     awb_code = db.Column(db.String(100), nullable=True)
     courier_name = db.Column(db.String(100), nullable=True)
     tracking_url = db.Column(db.String(500), nullable=True)
-    payment_id = db.Column(db.String(120), nullable=True)
+    payment_id = db.Column(db.String(120), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # WhatsApp flags
     wa_order_confirm_sent = db.Column(db.Boolean, default=False)
