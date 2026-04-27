@@ -27,3 +27,4 @@ class TempOrder(db.Model):
     razorpay_order_id = db.Column(db.String(100))
     total_amount = db.Column(db.Integer)
     address = db.Column(db.Text)
+    cart_data = db.Column(db.Text)

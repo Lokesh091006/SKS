@@ -2109,7 +2109,6 @@ def sync_shiprocket_order(order_db_id):
     return redirect("/admin/orders")
 
 
-
 @app.route("/payment", methods=["GET", "POST"])
 def payment():
     if "user_id" not in session:
@@ -2221,6 +2220,8 @@ def tracking_webhook():
     return "OK", 200
 
 
+import json
+
 @app.route("/razorpay-checkout")
 def razorpay_checkout():
     if "user_id" not in session:
@@ -2232,6 +2233,8 @@ def razorpay_checkout():
 
     amount_paise = int(float(amount) * 100)
 
+    cart = session.get("cart", {})   # 🔥 ADD THIS
+
     # ✅ CREATE RAZORPAY ORDER
     razorpay_order = client.order.create({
         "amount": amount_paise,
@@ -2239,22 +2242,23 @@ def razorpay_checkout():
         "payment_capture": 1,
         "notes": {
             "user_id": str(session["user_id"]),
-            "address_id": str(session.get("address", "")),
+            "address_id": str(session.get("address")),
             "payment_method": "razorpay"
         }
     })
 
-    # 🔥 SAVE TEMP ORDER (IMPORTANT)
+    # 🔥 SAVE TEMP ORDER WITH CART
     temp = TempOrder(
         user_id=session["user_id"],
         razorpay_order_id=razorpay_order["id"],
         total_amount=amount,
-        address=session.get("address")
+        address=session.get("address"),
+        cart_data=json.dumps(cart)   # 🔥 MOST IMPORTANT
     )
+
     db.session.add(temp)
     db.session.commit()
 
-    # ✅ SAVE IN SESSION (optional but ok)
     session["razorpay_order_id"] = razorpay_order["id"]
 
     user = User.query.get(session["user_id"])
@@ -2297,6 +2301,9 @@ def razorpay_verify():
         print("RAZORPAY VERIFY ERROR:", e)
         return "Payment verification failed ❌", 400
 
+import json
+import time
+
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
 
@@ -2304,7 +2311,7 @@ def razorpay_webhook():
     signature = request.headers.get("X-Razorpay-Signature")
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # 🔐 Verify webhook
+    # 🔐 verify
     try:
         client.utility.verify_webhook_signature(
             payload.decode("utf-8"),
@@ -2322,52 +2329,63 @@ def razorpay_webhook():
 
         payment = data["payload"]["payment"]["entity"]
         payment_id = payment.get("id")
+        razorpay_order_id = payment.get("order_id")
 
         print("💰 Payment captured:", payment_id)
 
-        # 🧠 notes
-        notes = payment.get("notes", {})
-
-        try:
-            user_id = int(notes.get("user_id", 0))
-            address_id = int(notes.get("address_id", 0))
-        except:
-            print("❌ Invalid notes data")
+        # 🔁 duplicate check
+        existing = Order.query.filter_by(payment_id=payment_id).first()
+        if existing:
+            print("⚠️ Duplicate webhook ignored")
             return "OK", 200
 
-        product = Product.query.first()
-        if not product:
-            print("❌ No product found")
+        # 🔥 GET TEMP ORDER
+        temp = TempOrder.query.filter_by(
+            razorpay_order_id=razorpay_order_id
+        ).first()
+
+        if not temp:
+            print("❌ TempOrder not found")
             return "OK", 200
 
-        try:
-            new_order = Order(
-                order_id="ORD" + str(int(time.time())),
-                user_id=user_id,
-                product_id=product.id,
-                address_id=address_id,
-                payment_method="razorpay",
-                payment_id=payment_id,
-                status="PLACED"
-            )
+        cart = json.loads(temp.cart_data)
 
-            db.session.add(new_order)
+        print("🔥 Creating real orders from cart")
+
+        try:
+            for key, item in cart.items():
+
+                product_id = item.get("product_id")
+                qty = item.get("qty", 1)
+                size = item.get("size")
+
+                for _ in range(qty):
+                    new_order = Order(
+                        order_id="ORD" + str(int(time.time()*1000)),
+                        user_id=temp.user_id,
+                        product_id=product_id,
+                        address_id=temp.address,
+                        payment_method="razorpay",
+                        payment_id=payment_id,
+                        size=size,
+                        status="PLACED"
+                    )
+
+                    db.session.add(new_order)
+
             db.session.commit()
 
-            print("✅ Order created")
+            print("✅ Correct orders created")
+
+            # 🔥 OPTIONAL: delete temp
+            db.session.delete(temp)
+            db.session.commit()
 
         except Exception as e:
             db.session.rollback()
-
-            # 🔥 THIS IS THE REAL FIX
-            if "unique" in str(e).lower():
-                print("⚠️ Duplicate webhook ignored")
-                return "OK", 200
-
             print("❌ DB Error:", e)
 
     return "OK", 200
-
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
