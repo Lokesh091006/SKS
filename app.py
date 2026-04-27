@@ -2845,16 +2845,6 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
 
-    import threading
-    import time
-
-    def run_shiprocket_worker():
-        while True:
-            with app.app_context():
-                process_shiprocket_orders()
-            time.sleep(300)  # every 5 mins
-
-    # ✅ Start background worker
-    threading.Thread(target=run_shiprocket_worker, daemon=True).start()
+  
 
     app.run(debug=True)
