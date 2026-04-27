@@ -2290,8 +2290,11 @@ def razorpay_verify():
 
 import json
 import time
-
-
+import os
+from flask import request
+from yourapp import app, db
+from yourapp.models import Order, TempOrder, ProductSize, Product
+from yourapp.razorpay_client import client
 
 
 @app.route("/razorpay-webhook", methods=["POST"])
@@ -2350,12 +2353,11 @@ def razorpay_webhook():
                 qty = item.get("qty", 1)
                 size = item.get("size")
 
-                # ❌ SAFETY CHECK
                 if not product_id:
                     print("❌ product_id missing, skipping")
                     continue
 
-                # 🔍 FETCH SIZE ITEM
+                # 🔥 FETCH SIZE ITEM
                 size_item = None
                 if size:
                     size_item = ProductSize.query.filter_by(
@@ -2363,14 +2365,29 @@ def razorpay_webhook():
                         size=size
                     ).first()
 
-                # ❌ STOCK CHECK
-                if size_item and size_item.stock < qty:
-                    print("❌ Not enough stock, skipping order")
-                    continue
+                # 🔥 STOCK HANDLING (FIXED PART)
 
-                # 🔥 REDUCE STOCK FIRST
                 if size_item:
+                    # ✅ SIZE BASED PRODUCT
+                    if size_item.stock < qty:
+                        print("❌ Not enough stock")
+                        continue
+
                     size_item.stock -= qty
+
+                else:
+                    # ✅ NO SIZE PRODUCT
+                    product = Product.query.get(product_id)
+
+                    if not product:
+                        print("❌ Product not found")
+                        continue
+
+                    if product.stock < qty:
+                        print("❌ Not enough stock (no size)")
+                        continue
+
+                    product.stock -= qty
 
                 # 🧾 CREATE ORDER(S)
                 for i in range(qty):
@@ -2400,6 +2417,11 @@ def razorpay_webhook():
             print("❌ DB Error:", e)
 
     return "OK", 200
+
+
+
+
+
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
