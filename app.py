@@ -2291,6 +2291,9 @@ def razorpay_verify():
 import json
 import time
 
+
+
+
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
 
@@ -2298,7 +2301,7 @@ def razorpay_webhook():
     signature = request.headers.get("X-Razorpay-Signature")
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # 🔐 VERIFY
+    # 🔐 VERIFY SIGNATURE
     try:
         client.utility.verify_webhook_signature(
             payload.decode("utf-8"),
@@ -2312,6 +2315,7 @@ def razorpay_webhook():
     data = request.json
     event = data.get("event")
 
+    # 🎯 HANDLE PAYMENT SUCCESS
     if event == "payment.captured":
 
         payment = data["payload"]["payment"]["entity"]
@@ -2351,6 +2355,24 @@ def razorpay_webhook():
                     print("❌ product_id missing, skipping")
                     continue
 
+                # 🔍 FETCH SIZE ITEM
+                size_item = None
+                if size:
+                    size_item = ProductSize.query.filter_by(
+                        product_id=product_id,
+                        size=size
+                    ).first()
+
+                # ❌ STOCK CHECK
+                if size_item and size_item.stock < qty:
+                    print("❌ Not enough stock, skipping order")
+                    continue
+
+                # 🔥 REDUCE STOCK FIRST
+                if size_item:
+                    size_item.stock -= qty
+
+                # 🧾 CREATE ORDER(S)
                 for i in range(qty):
                     new_order = Order(
                         order_id=f"ORD{int(time.time()*1000)}{i}",
@@ -2365,10 +2387,11 @@ def razorpay_webhook():
 
                     db.session.add(new_order)
 
+            # 💾 SAVE ALL
             db.session.commit()
-            print("✅ Orders created successfully")
+            print("✅ Orders created & stock updated")
 
-            # 🔥 DELETE TEMP ORDER
+            # 🗑 DELETE TEMP ORDER
             db.session.delete(temp)
             db.session.commit()
 
@@ -2376,7 +2399,7 @@ def razorpay_webhook():
             db.session.rollback()
             print("❌ DB Error:", e)
 
-    return "OK", 200    
+    return "OK", 200
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
