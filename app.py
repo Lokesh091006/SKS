@@ -1204,31 +1204,24 @@ def clear_cart():
 def add_to_cart(product_id):
 
     cart = session.get("cart", {})
-    pid = str(product_id)
 
-    # 🔹 size
     size = (request.args.get("size") or "").strip()
     size = size if size else "nosize"
 
-    # 🔥 SAFE QTY
     qty_str = request.args.get("qty")
     qty = int(qty_str) if qty_str and qty_str.isdigit() else 1
 
-    # 🔹 product check
     product = Product.query.filter_by(id=product_id, is_active=True).first()
     if not product:
         flash("This product is unavailable ❌", "error")
         return redirect(request.referrer or "/")
 
-    # 🔹 size logic
     all_sizes = ProductSize.query.filter_by(product_id=product_id).all()
     has_real_sizes = any((s.size or "").strip() for s in all_sizes)
 
     if has_real_sizes and size == "nosize":
-        flash("Please select a size before adding to cart!", "error")
+        flash("Please select size ❌", "error")
         return redirect(request.referrer or "/")
-
-    size_item = None
 
     if has_real_sizes:
         size_item = ProductSize.query.filter_by(
@@ -1240,31 +1233,20 @@ def add_to_cart(product_id):
             flash("Out of stock ❌", "error")
             return redirect(request.referrer or "/")
 
-        if qty > size_item.stock:
-            flash(f"Only {size_item.stock} item(s) available ⚠️", "error")
-            return redirect(request.referrer or "/")
-
-    # 🔥 KEY ALWAYS SAME FORMAT
-    cart_key = f"{pid}_{size}"
+    cart_key = f"{product_id}_{size}"
 
     if cart_key in cart:
-        current_qty = cart[cart_key].get("qty", 1)
-
-        if has_real_sizes and current_qty + qty > size_item.stock:
-            flash(f"Maximum {size_item.stock} items allowed ⚠️", "error")
-            return redirect(request.referrer or "/")
-
-        cart[cart_key]["qty"] = current_qty + qty
-
+        cart[cart_key]["qty"] += qty
     else:
         cart[cart_key] = {
+            "product_id": product_id,   # 🔥 IMPORTANT
             "qty": qty,
             "size": None if size == "nosize" else size
         }
 
     session["cart"] = cart
 
-    flash("Product added to cart ✅", "success")
+    flash("Added to cart ✅", "success")
     return redirect(url_for("cart"))
 
 @app.route("/buy-now/<int:product_id>")
@@ -2220,40 +2202,45 @@ def tracking_webhook():
     return "OK", 200
 
 
-import json
+ import json
 
 @app.route("/razorpay-checkout")
 def razorpay_checkout():
+
     if "user_id" not in session:
         return redirect("/login")
 
     amount = session.get("final_amount")
-    if not amount:
-        return redirect(url_for("payment"))
+    cart = session.get("cart")
+
+    if not amount or not cart:
+        return redirect(url_for("cart"))
 
     amount_paise = int(float(amount) * 100)
 
-    cart = session.get("cart", {})   # 🔥 ADD THIS
-
-    # ✅ CREATE RAZORPAY ORDER
+    # ✅ CREATE ORDER IN RAZORPAY
     razorpay_order = client.order.create({
         "amount": amount_paise,
         "currency": "INR",
         "payment_capture": 1,
         "notes": {
             "user_id": str(session["user_id"]),
-            "address_id": str(session.get("address")),
-            "payment_method": "razorpay"
+            "address_id": str(session.get("address", ""))
         }
     })
 
-    # 🔥 SAVE TEMP ORDER WITH CART
+    # 🔥 DELETE OLD TEMP (important)
+    TempOrder.query.filter_by(
+        razorpay_order_id=razorpay_order["id"]
+    ).delete()
+
+    # 🔥 SAVE CART
     temp = TempOrder(
         user_id=session["user_id"],
         razorpay_order_id=razorpay_order["id"],
         total_amount=amount,
         address=session.get("address"),
-        cart_data=json.dumps(cart)   # 🔥 MOST IMPORTANT
+        cart_data=json.dumps(cart)
     )
 
     db.session.add(temp)
@@ -2301,7 +2288,7 @@ def razorpay_verify():
         print("RAZORPAY VERIFY ERROR:", e)
         return "Payment verification failed ❌", 400
 
-import json
+ import json
 import time
 
 @app.route("/razorpay-webhook", methods=["POST"])
@@ -2311,7 +2298,7 @@ def razorpay_webhook():
     signature = request.headers.get("X-Razorpay-Signature")
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # 🔐 verify
+    # 🔐 VERIFY
     try:
         client.utility.verify_webhook_signature(
             payload.decode("utf-8"),
@@ -2333,13 +2320,13 @@ def razorpay_webhook():
 
         print("💰 Payment captured:", payment_id)
 
-        # 🔁 duplicate check
+        # 🔁 DUPLICATE CHECK
         existing = Order.query.filter_by(payment_id=payment_id).first()
         if existing:
             print("⚠️ Duplicate webhook ignored")
             return "OK", 200
 
-        # 🔥 GET TEMP ORDER
+        # 🔥 FETCH TEMP ORDER
         temp = TempOrder.query.filter_by(
             razorpay_order_id=razorpay_order_id
         ).first()
@@ -2353,18 +2340,23 @@ def razorpay_webhook():
         print("🔥 Creating real orders from cart")
 
         try:
-            for key, item in cart.items():
+            for item in cart.values():
 
                 product_id = item.get("product_id")
                 qty = item.get("qty", 1)
                 size = item.get("size")
 
-                for _ in range(qty):
+                # ❌ SAFETY CHECK
+                if not product_id:
+                    print("❌ product_id missing, skipping")
+                    continue
+
+                for i in range(qty):
                     new_order = Order(
-                        order_id="ORD" + str(int(time.time()*1000)),
+                        order_id=f"ORD{int(time.time()*1000)}{i}",
                         user_id=temp.user_id,
-                        product_id=product_id,
-                        address_id=temp.address,
+                        product_id=int(product_id),
+                        address_id=int(temp.address) if temp.address else None,
                         payment_method="razorpay",
                         payment_id=payment_id,
                         size=size,
@@ -2374,10 +2366,9 @@ def razorpay_webhook():
                     db.session.add(new_order)
 
             db.session.commit()
+            print("✅ Orders created successfully")
 
-            print("✅ Correct orders created")
-
-            # 🔥 OPTIONAL: delete temp
+            # 🔥 DELETE TEMP ORDER
             db.session.delete(temp)
             db.session.commit()
 
@@ -2385,7 +2376,7 @@ def razorpay_webhook():
             db.session.rollback()
             print("❌ DB Error:", e)
 
-    return "OK", 200
+    return "OK", 200    
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
