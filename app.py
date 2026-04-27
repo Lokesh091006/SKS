@@ -2292,9 +2292,6 @@ import json
 import time
 import os
 from flask import request
-from yourapp import app, db
-from yourapp.models import Order, TempOrder, ProductSize, Product
-from yourapp.razorpay_client import client
 
 
 @app.route("/razorpay-webhook", methods=["POST"])
