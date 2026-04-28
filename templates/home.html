@@ -161,6 +161,90 @@
     margin-right:15px;
     box-sizing:border-box;
 }
+
+.circle-categories{
+    display:flex;
+    gap:26px;
+    overflow-x:auto;
+    padding:22px 18px;
+    background:#fff;
+}
+
+.circle-categories::-webkit-scrollbar{
+    display:none;
+}
+
+.circle-item{
+    text-align:center;
+    min-width:130px;
+    flex-shrink:0;
+}
+
+/* 🔥 circle */
+.circle-item img{
+    width:125px;
+    height:125px;
+    border-radius:50%;
+    object-fit:cover;
+
+    border:2px solid #ffc0d3;
+    padding:4px;
+    background:#fff;
+
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    transition:0.3s ease;
+}
+
+/* hover */
+.circle-item img:hover{
+    transform:scale(1.05);
+    box-shadow:0 8px 20px rgba(255, 105, 150, 0.25);
+    border-color:#ff6f9f;
+}
+
+/* text */
+.circle-item p{
+    margin-top:10px;
+    font-size:14px;
+    font-weight:500;
+    color:#444;
+}
+
+.circle-item:hover p{
+    color:#ff4d8d;
+}
+
+/* mobile */
+@media (max-width:600px){
+    .circle-item{
+        min-width:105px;
+    }
+
+    .circle-item img{
+        width:95px;
+        height:95px;
+    }
+
+    .circle-item p{
+        font-size:12px;
+    }
+}
+.circle-item a{
+    display:block;
+    transition:0.15s;
+}
+
+.circle-item a:active{
+    transform:scale(0.95);
+}
+.circle-item img{
+    width:125px;
+    height:125px;
+    border-radius:50%;
+    object-fit:cover;
+
+    object-position: top;   /* 🔥 FACE TOP ki move avthundi */
+}
 </style>
 </head>
 
@@ -184,6 +268,67 @@
     </div>
 </section>
 {% endif %}
+
+
+<section class="circle-categories">
+
+    <!-- SAREES -->
+    <div class="circle-item">
+        <a href="/category/women?type=saree&brand=pattusarees">
+            <img src="{{ url_for('static', filename='images/pattu.jpg') }}">
+            <p>Pattu</p>
+        </a>
+    </div>
+
+    <div class="circle-item">
+        <a href="/category/women?type=saree&brand=cottonsarees">
+            <img src="{{ url_for('static', filename='images/cotton.jpg') }}">
+            <p>Cotton</p>
+        </a>
+    </div>
+
+    <div class="circle-item">
+        <a href="/category/women?type=saree&brand=fancysarees">
+            <img src="{{ url_for('static', filename='images/fancy.jpg') }}">
+            <p>Fancy&Synthethic</p>
+        </a>
+    </div>
+
+    <!-- CHUDIDARS -->
+    <div class="circle-item">
+        <a href="/category/women?type=chudidar">
+            <img src="{{ url_for('static', filename='images/chudidar.jpg') }}">
+            <p>Chudidar</p>
+        </a>
+    </div>
+
+    <!-- KURTIS → TOPS -->
+    <div class="circle-item">
+        <a href="/category/women?type=kurti">
+            <img src="{{ url_for('static', filename='images/kurti.jpg') }}">
+            <p>Tops</p>
+        </a>
+    </div>
+
+    <!-- LEGGINGS + INNERWEAR -->
+    <div class="circle-item">
+        <a href="/category/women?type=legging">
+            <img src="{{ url_for('static', filename='images/legging.jpg') }}">
+            <p>Leggings</p>
+        </a>
+    </div>
+
+  
+
+    <!-- RAMRAJ (MEN) -->
+    <div class="circle-item">
+        <a href="/category/men?type=shirt&brand=ramraj">
+            <img src="{{ url_for('static', filename='images/ramraj.jpg') }}">
+            <p>Ramraj</p>
+        </a>
+    </div>
+
+</section>
 <!-- CATEGORIES -->
  {% if not query %}
 <section class="collections">
