@@ -454,7 +454,7 @@ def create_shiprocket_order(main_order_id, user, address, cart_items, payment_me
     payload = {
         "order_id": str(main_order_id),
         "order_date": time.strftime("%Y-%m-%d %H:%M"),
-        "pickup_location": os.getenv("SHIPROCKET_PICKUP_LOCATION", "Home").strip(),
+        "pickup_location": os.getenv("SHIPROCKET_PICKUP_LOCATION", "warehouse").strip(),
         "channel_id": os.getenv("SHIPROCKET_CHANNEL_ID", "").strip(),
         "comment": "Order from KalaSilks website",
         "billing_customer_name": address.name or (user.username or "Customer"),
