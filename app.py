@@ -492,9 +492,20 @@ def create_shiprocket_order(main_order_id, user, address, cart_items, payment_me
         data = {"raw": r.text}
 
     if r.status_code not in (200, 201):
+
+
         return {"ok": False, "error": data}
 
-    return {"ok": True, "data": data}
+# 🔥 CHECK actual success
+    if isinstance(data, dict) and data.get("order_id"):
+
+
+        return {"ok": True, "data": data}
+    else:
+
+        
+
+        return {"ok": False, "error": data}
 
 
 from datetime import datetime, timedelta
