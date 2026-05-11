@@ -21,6 +21,7 @@
             <button class="prev" id="prevBtn">❮</button>
 
             <div class="slides" id="slides">
+
                 {% if product.image %}
                     {% if product.image.startswith('http') %}
                         <img src="{{ product.image.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
@@ -31,7 +32,7 @@
 
                 {% if product.image2 %}
                     {% if product.image2.startswith('http') %}
-                       <img src="{{ product.image.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
+                        <img src="{{ product.image2.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
                     {% else %}
                         <img src="{{ product.image2|imgsrc }}">
                     {% endif %}
@@ -39,11 +40,12 @@
 
                 {% if product.image3 %}
                     {% if product.image3.startswith('http') %}
-                       <img src="{{ product.image.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
+                        <img src="{{ product.image3.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
                     {% else %}
                         <img src="{{ product.image3|imgsrc }}">
                     {% endif %}
                 {% endif %}
+
             </div>
 
             <button class="next" id="nextBtn">❯</button>
@@ -55,22 +57,30 @@
 
         <h1 class="product-title">{{ product.name }}</h1>
         <p class="product-price">₹ {{ product.price }}</p>
-       {% if product.color and product.color.strip() and related_colors %}
-<div class="color-section">
-    <label>Available Colors:</label>
-    <div class="color-options">
-        {% for item in related_colors %}
-            {% if item.color and item.color.strip() %}
-            <a href="{{ url_for('product_page', pid=item.id) }}"
-               class="color-chip {% if item.id == product.id %}active{% endif %}">
-                <span class="color-dot" style="background: {{ item.color.strip().lower() }};"></span>
-                <span>{{ item.color }}</span>
-            </a>
-            {% endif %}
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
+
+        {% if product.color and product.color.strip() and related_colors %}
+        <div class="color-section">
+            <label>Available Colors:</label>
+
+            <div class="color-options">
+                {% for item in related_colors %}
+                    {% if item.color and item.color.strip() %}
+                    <a href="{{ url_for('product_page', pid=item.id) }}"
+                       class="color-chip {% if item.id == product.id %}active{% endif %}">
+
+                        <span class="color-dot"
+                              style="background: {{ item.color.strip().lower() }};">
+                        </span>
+
+                        <span>{{ item.color }}</span>
+
+                    </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         {% set valid_sizes = sizes | selectattr("size") | list %}
         {% set has_sizes = valid_sizes|length > 0 %}
         {% set all_out = has_sizes and (sizes|selectattr("stock", "equalto", 0)|list|length == sizes|length) %}
@@ -90,28 +100,40 @@
 
         {% if has_sizes %}
         <div class="size-box">
+
             <label>Select Size:</label>
+
             <div class="sizes">
                 {% for s in sizes %}
+
                     {% if s.size %}
+
                         {% if s.stock > 0 %}
                             <span class="size">{{ s.size }}</span>
                         {% else %}
                             <span class="size sold">{{ s.size }} ❌</span>
                         {% endif %}
+
                     {% endif %}
+
                 {% endfor %}
             </div>
+
             <input type="hidden" name="size" id="selectedSize">
+
         </div>
         {% else %}
             <input type="hidden" name="size" id="selectedSize" value="">
         {% endif %}
 
         <div class="qty-box">
+
             <label for="qty">Quantity</label>
+
             <select id="qty"></select>
-<p id="stockText" style="color:red; margin-top:5px;"></p>
+
+            <p id="stockText" style="color:red; margin-top:5px;"></p>
+
         </div>
 
         <div class="product-buttons">
@@ -120,12 +142,16 @@
                 <i id="wishlistIcon" class="fa-regular fa-heart"></i>
             </div>
 
-            <a href="#" id="addToCartBtn" class="btn-cart"
+            <a href="#"
+               id="addToCartBtn"
+               class="btn-cart"
                {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
                 🛒
             </a>
 
-            <a href="#" id="buyNowBtn" class="btn-buy"
+            <a href="#"
+               id="buyNowBtn"
+               class="btn-buy"
                {% if all_out %}style="pointer-events:none;opacity:0.5;"{% endif %}>
                 Buy Now
             </a>
@@ -141,11 +167,9 @@
 
 </section>
 
-
 {% include "footer.html" %}
 
 <script>
-
 
 const sizeStockMap = {
     {% for s in sizes %}
@@ -153,68 +177,100 @@ const sizeStockMap = {
     {% endfor %}
 };
 
-
 document.addEventListener("DOMContentLoaded", function () {
 
     // ===== SLIDER =====
     let index = 0;
+
     const slides = document.getElementById("slides");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
 
     nextBtn.addEventListener("click", () => {
+
         if (index < slides.children.length - 1) {
             index++;
-            slides.style.transform = `translateX(-${index * 100}%)`;
+
+            slides.style.transform =
+                `translateX(-${index * 100}%)`;
         }
+
     });
 
     prevBtn.addEventListener("click", () => {
+
         if (index > 0) {
             index--;
-            slides.style.transform = `translateX(-${index * 100}%)`;
+
+            slides.style.transform =
+                `translateX(-${index * 100}%)`;
         }
+
     });
 
     // ===== SIZE SELECT =====
+
     const sizeEls = document.querySelectorAll(".size");
     const hiddenInput = document.getElementById("selectedSize");
+
     const hasSizes = sizeEls.length > 0;
 
     sizeEls.forEach(size => {
-    size.addEventListener("click", () => {
-        if (size.classList.contains("sold")) return;
 
-        sizeEls.forEach(s => s.classList.remove("active"));
-        size.classList.add("active");
+        size.addEventListener("click", () => {
 
-        let selected = size.innerText.replace(" ❌", "").trim();
-        hiddenInput.value = selected;
+            if (size.classList.contains("sold")) return;
 
-        // 🔥 stock fetch
-        let stock = sizeStockMap[selected];
+            sizeEls.forEach(s =>
+                s.classList.remove("active")
+            );
 
-        const qtyEl = document.getElementById("qty");
-        qtyEl.innerHTML = "";
+            size.classList.add("active");
 
-        // 🔥 qty options create (stock varaku matrame)
-        for (let i = 1; i <= stock; i++) {
-            let option = document.createElement("option");
-            option.value = i;
-            option.text = i;
-            qtyEl.appendChild(option);
-        }
+            let selected =
+                size.innerText.replace(" ❌", "").trim();
 
-        // 🔥 stock text show
-        document.getElementById("stockText").innerText = "Only " + stock + " left";
+            hiddenInput.value = selected;
+
+            // ===== STOCK =====
+
+            let stock = sizeStockMap[selected];
+
+            const qtyEl = document.getElementById("qty");
+
+            qtyEl.innerHTML = "";
+
+            for (let i = 1; i <= stock; i++) {
+
+                let option =
+                    document.createElement("option");
+
+                option.value = i;
+                option.text = i;
+
+                qtyEl.appendChild(option);
+            }
+
+            document.getElementById("stockText").innerText =
+                "Only " + stock + " left";
+
+        });
+
     });
-});
+
     // ===== BUTTONS =====
-    const addToCartBtn = document.getElementById("addToCartBtn");
-    const buyNowBtn = document.getElementById("buyNowBtn");
-    const qtyEl = document.getElementById("qty");
+
+    const addToCartBtn =
+        document.getElementById("addToCartBtn");
+
+    const buyNowBtn =
+        document.getElementById("buyNowBtn");
+
+    const qtyEl =
+        document.getElementById("qty");
 
     addToCartBtn.addEventListener("click", function (e) {
+
         e.preventDefault();
 
         if (hasSizes && !hiddenInput.value) {
@@ -222,17 +278,21 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        let url = "{{ url_for('add_to_cart', product_id=product.id) }}" +
-                  "?qty=" + encodeURIComponent(qtyEl.value);
+        let url =
+            "{{ url_for('add_to_cart', product_id=product.id) }}" +
+            "?qty=" + encodeURIComponent(qtyEl.value);
 
         if (hasSizes) {
-            url += "&size=" + encodeURIComponent(hiddenInput.value);
+            url += "&size=" +
+                encodeURIComponent(hiddenInput.value);
         }
 
         window.location.href = url;
+
     });
 
     buyNowBtn.addEventListener("click", function (e) {
+
         e.preventDefault();
 
         if (hasSizes && !hiddenInput.value) {
@@ -240,65 +300,101 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        let url = "{{ url_for('buy_now', product_id=product.id) }}" +
-                  "?qty=" + encodeURIComponent(qtyEl.value);
+        let url =
+            "{{ url_for('buy_now', product_id=product.id) }}" +
+            "?qty=" + encodeURIComponent(qtyEl.value);
 
         if (hasSizes) {
-            url += "&size=" + encodeURIComponent(hiddenInput.value);
+            url += "&size=" +
+                encodeURIComponent(hiddenInput.value);
         }
 
         window.location.href = url;
+
     });
 
     // ===== WISHLIST =====
-    const wishlistIcon = document.getElementById("wishlistIcon");
-    const wishlist = {{ session.get("wishlist", [])|tojson }};
+
+    const wishlistIcon =
+        document.getElementById("wishlistIcon");
+
+    const wishlist =
+        {{ session.get("wishlist", [])|tojson }};
 
     if (wishlist.includes({{ product.id }})) {
+
         wishlistIcon.classList.add("fa-solid");
         wishlistIcon.classList.remove("fa-regular");
+
         wishlistIcon.style.color = "red";
     }
 
     wishlistIcon.addEventListener("click", function () {
+
         fetch(`/add-to-wishlist/{{ product.id }}`)
+
             .then(res => res.json())
+
             .then(data => {
+
                 if (data.status === "added") {
+
                     wishlistIcon.classList.add("fa-solid");
                     wishlistIcon.classList.remove("fa-regular");
+
                     wishlistIcon.style.color = "red";
+
                 } else {
+
                     wishlistIcon.classList.add("fa-regular");
                     wishlistIcon.classList.remove("fa-solid");
+
                     wishlistIcon.style.color = "black";
                 }
+
             });
+
     });
+
+    // ===== DEFAULT QTY =====
+
+    if (!hasSizes) {
+
+        qtyEl.innerHTML = "";
+
+        for (let i = 1; i <= 5; i++) {
+
+            let option =
+                document.createElement("option");
+
+            option.value = i;
+            option.text = i;
+
+            qtyEl.appendChild(option);
+        }
+
+    }
+
 });
 
+// ===== SOLD OUT SIZE CLICK =====
+
 document.addEventListener("DOMContentLoaded", function () {
+
     document.querySelectorAll(".size").forEach(el => {
+
         if (el.classList.contains("sold")) {
+
             el.onclick = function () {
                 alert("This size is sold out ❌");
             }
+
         }
+
     });
+
 });
 
-
-if (!hasSizes) {
-    const qtyEl = document.getElementById("qty");
-    qtyEl.innerHTML = "";
-
-    for (let i = 1; i <= 5; i++) {
-        let option = document.createElement("option");
-        option.value = i;
-        option.text = i;
-        qtyEl.appendChild(option);
-    }
-}
 </script>
 
 </body>
