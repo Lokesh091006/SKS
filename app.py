@@ -2280,12 +2280,14 @@ def razorpay_verify():
 
     try:
 
+        # ✅ VERIFY SIGNATURE
         client.utility.verify_payment_signature({
             "razorpay_payment_id": razorpay_payment_id,
             "razorpay_order_id": razorpay_order_id,
             "razorpay_signature": razorpay_signature
         })
 
+        # ✅ FETCH PAYMENT
         payment = client.payment.fetch(razorpay_payment_id)
 
         print("RAZORPAY PAYMENT FETCH:", payment)
@@ -2293,21 +2295,25 @@ def razorpay_verify():
         if payment.get("status") != "captured":
             return "Payment not captured yet ❌", 400
 
+        # ✅ SAVE SESSION
         session["payment_method"] = "razorpay"
         session["razorpay_payment_id"] = razorpay_payment_id
 
+        # ✅ ONLY REDIRECT
         return redirect(url_for("payment_success"))
 
     except Exception as e:
-        print("RAZORPAY VERIFY ERROR:", e)
-        return "Payment verification failed ❌", 400
 
+        print("RAZORPAY VERIFY ERROR:", e)
+
+        return "Payment verification failed ❌", 400
 import json
 import time
 import os
 import random
 
 from flask import request
+
 
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
@@ -2318,7 +2324,10 @@ def razorpay_webhook():
 
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # ✅ VERIFY SIGNATURE
+    # ==========================================
+    # VERIFY WEBHOOK SIGNATURE
+    # ==========================================
+
     try:
 
         client.utility.verify_webhook_signature(
@@ -2330,13 +2339,17 @@ def razorpay_webhook():
     except Exception as e:
 
         print("❌ Webhook verify failed:", e)
+
         return "Invalid", 400
 
     data = request.json
 
     event = data.get("event")
 
-    # ✅ PAYMENT SUCCESS
+    # ==========================================
+    # PAYMENT CAPTURED
+    # ==========================================
+
     if event == "payment.captured":
 
         payment = data["payload"]["payment"]["entity"]
@@ -2347,7 +2360,10 @@ def razorpay_webhook():
 
         print("💰 Payment captured:", payment_id)
 
-        # ✅ DUPLICATE CHECK
+        # ==========================================
+        # DUPLICATE CHECK
+        # ==========================================
+
         existing = Order.query.filter_by(
             payment_id=payment_id
         ).first()
@@ -2355,9 +2371,13 @@ def razorpay_webhook():
         if existing:
 
             print("⚠️ Duplicate webhook ignored")
+
             return "OK", 200
 
-        # ✅ FETCH TEMP ORDER
+        # ==========================================
+        # FETCH TEMP ORDER
+        # ==========================================
+
         temp = TempOrder.query.filter_by(
             razorpay_order_id=razorpay_order_id
         ).first()
@@ -2365,6 +2385,7 @@ def razorpay_webhook():
         if not temp:
 
             print("❌ TempOrder not found")
+
             return "OK", 200
 
         cart = json.loads(temp.cart_data)
@@ -2373,7 +2394,10 @@ def razorpay_webhook():
 
         try:
 
-            # ✅ LOOP CART
+            # ==========================================
+            # LOOP CART
+            # ==========================================
+
             for item in cart.values():
 
                 product_id = item.get("product_id")
@@ -2385,7 +2409,20 @@ def razorpay_webhook():
                 if not product_id:
                     continue
 
-                # ✅ SIZE STOCK
+                product = Product.query.get(product_id)
+
+                if not product:
+
+                    print("❌ Product not found")
+
+                    db.session.rollback()
+
+                    return "Product missing", 400
+
+                # ==========================================
+                # STOCK CHECK
+                # ==========================================
+
                 if size:
 
                     size_item = ProductSize.query.filter_by(
@@ -2396,16 +2433,30 @@ def razorpay_webhook():
                     if not size_item:
 
                         print("❌ Size item not found")
-                        continue
 
+                        db.session.rollback()
+
+                        return "Size missing", 400
+
+                    # ✅ IMPORTANT FIX
                     if size_item.stock < qty:
 
                         print("❌ Out of stock")
-                        continue
 
+                        db.session.rollback()
+
+                        return "Out of stock", 400
+
+                    # ✅ REDUCE STOCK
                     size_item.stock -= qty
 
-                # ✅ CREATE ORDERS
+                    # ✅ OPTIONAL
+                    update_product_visibility(product.id)
+
+                # ==========================================
+                # CREATE ORDERS
+                # ==========================================
+
                 for i in range(qty):
 
                     new_order = Order(
@@ -2435,75 +2486,13 @@ def razorpay_webhook():
 
                     time.sleep(0.001)
 
+            # ==========================================
+            # SAVE DB
+            # ==========================================
+
             db.session.commit()
 
             print("✅ Orders created")
-
-            # ✅ WHATSAPP + EMAIL
-            try:
-
-                user = User.query.get(temp.user_id)
-
-                address = Address.query.get(int(temp.address))
-
-                customer_name = user.username or "Customer"
-
-                customer_mobile = user.mobile or ""
-
-                order_no = created_orders[0].order_id if created_orders else "SKSORDER"
-
-                delivery_address_text = ""
-
-                if address:
-
-                    delivery_address_text = (
-                        f"{address.house or ''}, "
-                        f"{address.street or ''}, "
-                        f"{address.city or ''}, "
-                        f"{address.state or ''} - {address.pincode or ''}"
-                    ).strip(", ")
-
-                # ✅ WHATSAPP
-                if customer_mobile:
-
-                    send_whatsapp_order_confirmation(
-                        customer_mobile,
-                        customer_name,
-                        order_no,
-                        temp.total_amount,
-                        delivery_address_text
-                    )
-
-                    for o in created_orders:
-                        o.wa_order_confirm_sent = True
-
-                # ✅ EMAIL
-                if user and user.email:
-
-                    send_order_email(
-                        user,
-                        order_no,
-                        temp.total_amount,
-                        "",
-                        "",
-                        "https://www.kalasilks.com/my-orders"
-                    )
-
-                    for o in created_orders:
-                        o.email_sent = True
-
-                db.session.commit()
-
-                print("✅ WhatsApp + Email sent")
-
-            except Exception as e:
-
-                print("❌ Notification error:", e)
-
-            # ✅ DELETE TEMP ORDER
-            db.session.delete(temp)
-
-            db.session.commit()
 
         except Exception as e:
 
@@ -2511,11 +2500,90 @@ def razorpay_webhook():
 
             print("❌ DB Error:", e)
 
+            return "DB Error", 400
+
+        # ==========================================
+        # WHATSAPP + EMAIL
+        # ==========================================
+
+        try:
+
+            user = User.query.get(temp.user_id)
+
+            address = Address.query.get(int(temp.address))
+
+            customer_name = user.username or "Customer"
+
+            customer_mobile = user.mobile or ""
+
+            order_no = created_orders[0].order_id if created_orders else "SKSORDER"
+
+            delivery_address_text = ""
+
+            if address:
+
+                delivery_address_text = (
+                    f"{address.house or ''}, "
+                    f"{address.street or ''}, "
+                    f"{address.city or ''}, "
+                    f"{address.state or ''} - {address.pincode or ''}"
+                ).strip(", ")
+
+            # ==========================================
+            # WHATSAPP
+            # ==========================================
+
+            if customer_mobile and created_orders:
+
+                send_whatsapp_order_confirmation(
+                    customer_mobile,
+                    customer_name,
+                    order_no,
+                    temp.total_amount,
+                    delivery_address_text
+                )
+
+                for o in created_orders:
+                    o.wa_order_confirm_sent = True
+
+            # ==========================================
+            # EMAIL
+            # ==========================================
+
+            if user and user.email and created_orders:
+
+                send_order_email(
+                    user,
+                    order_no,
+                    temp.total_amount,
+                    "",
+                    "",
+                    "https://www.kalasilks.com/my-orders"
+                )
+
+            db.session.commit()
+
+            print("✅ WhatsApp + Email sent")
+
+        except Exception as e:
+
+            print("❌ Notification error:", e)
+
+        # ==========================================
+        # DELETE TEMP ORDER
+        # ==========================================
+
+        try:
+
+            db.session.delete(temp)
+
+            db.session.commit()
+
+        except Exception as e:
+
+            print("❌ Temp delete error:", e)
+
     return "OK", 200
-
-
-
-
 @app.route("/upi-details", methods=["GET", "POST"])
 def upi_details():
     if request.method == "POST":
@@ -2537,7 +2605,20 @@ def payment_success():
     if "user_id" not in session:
         return redirect("/login")
 
-    return render_template("payment_success.html")
+    payment_id = session.get("razorpay_payment_id")
+
+    if not payment_id:
+        return redirect("/")
+
+    # ✅ FETCH ORDERS CREATED BY WEBHOOK
+    orders = Order.query.filter_by(
+        payment_id=payment_id
+    ).all()
+
+    return render_template(
+        "payment_success.html",
+        orders=orders
+    )
 
 @app.route("/shop")
 def shop():
