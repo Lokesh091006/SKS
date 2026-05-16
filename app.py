@@ -2304,7 +2304,6 @@ import time
 import os
 from flask import request
 
-
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
 
@@ -2319,6 +2318,7 @@ def razorpay_webhook():
             signature,
             secret
         )
+
     except Exception as e:
         print("❌ Webhook verify failed:", e)
         return "Invalid", 400
@@ -2330,6 +2330,7 @@ def razorpay_webhook():
     if event == "payment.captured":
 
         payment = data["payload"]["payment"]["entity"]
+
         payment_id = payment.get("id")
         razorpay_order_id = payment.get("order_id")
 
@@ -2337,6 +2338,7 @@ def razorpay_webhook():
 
         # 🔁 DUPLICATE CHECK
         existing = Order.query.filter_by(payment_id=payment_id).first()
+
         if existing:
             print("⚠️ Duplicate webhook ignored")
             return "OK", 200
@@ -2355,6 +2357,7 @@ def razorpay_webhook():
         print("🔥 Creating real orders from cart")
 
         try:
+
             for item in cart.values():
 
                 product_id = item.get("product_id")
@@ -2365,40 +2368,41 @@ def razorpay_webhook():
                     print("❌ product_id missing, skipping")
                     continue
 
-                # 🔥 FETCH SIZE ITEM
+                # 🔥 GET PRODUCT
+                product = Product.query.get(product_id)
+
+                if not product:
+                    print("❌ Product not found")
+                    continue
+
+                # 🔥 SIZE PRODUCT HANDLE
                 size_item = None
+
                 if size:
                     size_item = ProductSize.query.filter_by(
                         product_id=product_id,
                         size=size
                     ).first()
 
-                # 🔥 STOCK HANDLING (FIXED PART)
-
+                # 🔥 STOCK UPDATE
                 if size_item:
-                    # ✅ SIZE BASED PRODUCT
+
+                    # ✅ CHECK STOCK
                     if size_item.stock < qty:
                         print("❌ Not enough stock")
                         continue
 
+                    # ✅ REDUCE STOCK
                     size_item.stock -= qty
 
                 else:
-                    # ✅ NO SIZE PRODUCT
-                    product = Product.query.get(product_id)
+                    # ✅ NON SIZE PRODUCT
+                    # Product table lo stock field ledu
+                    print("ℹ️ No size product, skipping stock update")
 
-                    if not product:
-                        print("❌ Product not found")
-                        continue
-
-                    if product.stock < qty:
-                        print("❌ Not enough stock (no size)")
-                        continue
-
-                    product.stock -= qty
-
-                # 🧾 CREATE ORDER(S)
+                # 🧾 CREATE ORDERS
                 for i in range(qty):
+
                     new_order = Order(
                         order_id=f"ORD{int(time.time()*1000)}{i}",
                         user_id=temp.user_id,
@@ -2414,6 +2418,7 @@ def razorpay_webhook():
 
             # 💾 SAVE ALL
             db.session.commit()
+
             print("✅ Orders created & stock updated")
 
             # 🗑 DELETE TEMP ORDER
@@ -2421,11 +2426,11 @@ def razorpay_webhook():
             db.session.commit()
 
         except Exception as e:
+
             db.session.rollback()
             print("❌ DB Error:", e)
 
     return "OK", 200
-
 
 
 
