@@ -1363,15 +1363,33 @@ def decrease(product_id, size):
 # 🔥 NO SIZE - INCREASE
 @app.route("/increase/<int:product_id>")
 def increase_no_size(product_id):
+
     cart = session.get("cart", {})
     key = str(product_id)
 
-    if key in cart:
-        cart[key]["qty"] += 1
+    if key not in cart:
+        return redirect(url_for("cart"))
+
+    product = Product.query.get(product_id)
+
+    if not product:
+        return redirect(url_for("cart"))
+
+    current_qty = int(cart[key]["qty"])
+
+    # 🔥 STOCK CHECK
+    if current_qty >= product.stock:
+
+        flash(f"Only {product.stock} item(s) available ⚠️", "error")
+
+        return redirect(url_for("cart"))
+
+    # ✅ SAFE
+    cart[key]["qty"] += 1
 
     session["cart"] = cart
-    return redirect(url_for("cart"))
 
+    return redirect(url_for("cart"))
 
 # 🔥 NO SIZE - DECREASE
 @app.route("/decrease/<int:product_id>")
