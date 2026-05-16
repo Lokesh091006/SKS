@@ -3,7 +3,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.utils
 import razorpay
-
+from flask_migrate import Migrate
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
 from models.product import Product, TempOrder
@@ -2270,6 +2270,7 @@ def razorpay_checkout():
     )
 @app.route("/razorpay-verify", methods=["POST"])
 def razorpay_verify():
+
     if "user_id" not in session:
         return redirect("/login")
 
@@ -2278,6 +2279,7 @@ def razorpay_verify():
     razorpay_signature = request.form.get("razorpay_signature")
 
     try:
+
         client.utility.verify_payment_signature({
             "razorpay_payment_id": razorpay_payment_id,
             "razorpay_order_id": razorpay_order_id,
@@ -2285,6 +2287,7 @@ def razorpay_verify():
         })
 
         payment = client.payment.fetch(razorpay_payment_id)
+
         print("RAZORPAY PAYMENT FETCH:", payment)
 
         if payment.get("status") != "captured":
@@ -2302,17 +2305,22 @@ def razorpay_verify():
 import json
 import time
 import os
+import random
+
 from flask import request
 
 @app.route("/razorpay-webhook", methods=["POST"])
 def razorpay_webhook():
 
     payload = request.data
+
     signature = request.headers.get("X-Razorpay-Signature")
+
     secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # 🔐 VERIFY SIGNATURE
+    # ✅ VERIFY SIGNATURE
     try:
+
         client.utility.verify_webhook_signature(
             payload.decode("utf-8"),
             signature,
@@ -2320,114 +2328,187 @@ def razorpay_webhook():
         )
 
     except Exception as e:
+
         print("❌ Webhook verify failed:", e)
         return "Invalid", 400
 
     data = request.json
+
     event = data.get("event")
 
-    # 🎯 HANDLE PAYMENT SUCCESS
+    # ✅ PAYMENT SUCCESS
     if event == "payment.captured":
 
         payment = data["payload"]["payment"]["entity"]
 
         payment_id = payment.get("id")
+
         razorpay_order_id = payment.get("order_id")
 
         print("💰 Payment captured:", payment_id)
 
-        # 🔁 DUPLICATE CHECK
-        existing = Order.query.filter_by(payment_id=payment_id).first()
+        # ✅ DUPLICATE CHECK
+        existing = Order.query.filter_by(
+            payment_id=payment_id
+        ).first()
 
         if existing:
+
             print("⚠️ Duplicate webhook ignored")
             return "OK", 200
 
-        # 🔥 FETCH TEMP ORDER
+        # ✅ FETCH TEMP ORDER
         temp = TempOrder.query.filter_by(
             razorpay_order_id=razorpay_order_id
         ).first()
 
         if not temp:
+
             print("❌ TempOrder not found")
             return "OK", 200
 
         cart = json.loads(temp.cart_data)
 
-        print("🔥 Creating real orders from cart")
+        created_orders = []
 
         try:
 
+            # ✅ LOOP CART
             for item in cart.values():
 
                 product_id = item.get("product_id")
-                qty = item.get("qty", 1)
+
+                qty = int(item.get("qty", 1))
+
                 size = item.get("size")
 
                 if not product_id:
-                    print("❌ product_id missing, skipping")
                     continue
 
-                # 🔥 GET PRODUCT
-                product = Product.query.get(product_id)
-
-                if not product:
-                    print("❌ Product not found")
-                    continue
-
-                # 🔥 SIZE PRODUCT HANDLE
-                size_item = None
-
+                # ✅ SIZE STOCK
                 if size:
+
                     size_item = ProductSize.query.filter_by(
                         product_id=product_id,
                         size=size
                     ).first()
 
-                # 🔥 STOCK UPDATE
-                if size_item:
+                    if not size_item:
 
-                    # ✅ CHECK STOCK
-                    if size_item.stock < qty:
-                        print("❌ Not enough stock")
+                        print("❌ Size item not found")
                         continue
 
-                    # ✅ REDUCE STOCK
+                    if size_item.stock < qty:
+
+                        print("❌ Out of stock")
+                        continue
+
                     size_item.stock -= qty
 
-                else:
-                    # ✅ NON SIZE PRODUCT
-                    # Product table lo stock field ledu
-                    print("ℹ️ No size product, skipping stock update")
-
-                # 🧾 CREATE ORDERS
+                # ✅ CREATE ORDERS
                 for i in range(qty):
 
                     new_order = Order(
-                        order_id=f"ORD{int(time.time()*1000)}{i}",
+
+                        order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
+
                         user_id=temp.user_id,
-                        product_id=int(product_id),
-                        address_id=int(temp.address) if temp.address else None,
+
+                        product_id=product_id,
+
+                        address_id=int(temp.address),
+
                         payment_method="razorpay",
+
                         payment_id=payment_id,
-                        size=size,
-                        status="PLACED"
+
+                        status="PLACED",
+
+                        size=size
                     )
 
                     db.session.add(new_order)
 
-            # 💾 SAVE ALL
+                    db.session.flush()
+
+                    created_orders.append(new_order)
+
+                    time.sleep(0.001)
+
             db.session.commit()
 
-            print("✅ Orders created & stock updated")
+            print("✅ Orders created")
 
-            # 🗑 DELETE TEMP ORDER
+            # ✅ WHATSAPP + EMAIL
+            try:
+
+                user = User.query.get(temp.user_id)
+
+                address = Address.query.get(int(temp.address))
+
+                customer_name = user.username or "Customer"
+
+                customer_mobile = user.mobile or ""
+
+                order_no = created_orders[0].order_id if created_orders else "SKSORDER"
+
+                delivery_address_text = ""
+
+                if address:
+
+                    delivery_address_text = (
+                        f"{address.house or ''}, "
+                        f"{address.street or ''}, "
+                        f"{address.city or ''}, "
+                        f"{address.state or ''} - {address.pincode or ''}"
+                    ).strip(", ")
+
+                # ✅ WHATSAPP
+                if customer_mobile:
+
+                    send_whatsapp_order_confirmation(
+                        customer_mobile,
+                        customer_name,
+                        order_no,
+                        temp.total_amount,
+                        delivery_address_text
+                    )
+
+                    for o in created_orders:
+                        o.wa_order_confirm_sent = True
+
+                # ✅ EMAIL
+                if user and user.email:
+
+                    send_order_email(
+                        user,
+                        order_no,
+                        temp.total_amount,
+                        "",
+                        "",
+                        "https://www.kalasilks.com/my-orders"
+                    )
+
+                    for o in created_orders:
+                        o.email_sent = True
+
+                db.session.commit()
+
+                print("✅ WhatsApp + Email sent")
+
+            except Exception as e:
+
+                print("❌ Notification error:", e)
+
+            # ✅ DELETE TEMP ORDER
             db.session.delete(temp)
+
             db.session.commit()
 
         except Exception as e:
 
             db.session.rollback()
+
             print("❌ DB Error:", e)
 
     return "OK", 200
@@ -2450,172 +2531,13 @@ def upi_processing():
     return render_template("upi_processing.html", upi_id=session.get("upi_id"), amount=session.get("final_amount"))
 
 
-from urllib.parse import quote
-
 @app.route("/payment-success")
 def payment_success():
+
     if "user_id" not in session:
         return redirect("/login")
 
-    # ✅ DUPLICATE ORDER PROTECTION
-    existing_order = Order.query.filter_by(
-        payment_id=session.get("razorpay_payment_id")
-    ).first()
-
-    if existing_order:
-        print("Duplicate order avoided")
-        return redirect(url_for("my_orders"))
-
-    cart = session.get("cart", {})
-    buy_now_item = session.get("buy_now_item")
-    address_id = session.get("address")
-    payment_method = session.get("payment_method")
-
-    if not address_id or not payment_method:
-        return redirect(url_for("address"))
-
-    created_ids = []
-    cart_items = []
-
-    # ---------------- BUY NOW FLOW ----------------
-    if buy_now_item:
-        product = Product.query.filter_by(
-            id=buy_now_item["product_id"],
-            is_active=True
-        ).first()
-
-        if not product:
-            session.pop("buy_now_item", None)
-            flash("Product not found ❌", "error")
-            return redirect(url_for("home"))
-
-        qty = int(buy_now_item.get("qty", 1))
-        size = buy_now_item.get("size")
-
-        cart_items = [{
-            "product": product,
-            "qty": qty,
-            "size": size
-        }]
-
-    # ---------------- NORMAL CART FLOW ----------------
-    else:
-        if not cart:
-            return redirect("/cart")
-
-        cart_items = build_cart_items_from_session(cart)
-
-    # ---------------- STOCK CHECK + ORDER CREATE ----------------
-    try:
-        for item in cart_items:
-            product = item["product"]
-            qty = item["qty"]
-            size = item["size"]
-
-            if size:
-                size_obj = ProductSize.query.filter_by(
-                    product_id=product.id,
-                    size=size
-                ).first()
-
-                if not size_obj or size_obj.stock < qty:
-                    flash(f"{size} size is out of stock ❌", "error")
-                    return redirect(url_for("product_page", pid=product.id))
-
-                size_obj.stock -= qty
-                update_product_visibility(product.id)
-
-            for _ in range(qty):
-                new_order = Order(
-                    order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
-                    user_id=session["user_id"],
-                    product_id=product.id,
-                    address_id=address_id,
-                    payment_method=payment_method,
-                    payment_id=session.get("razorpay_payment_id"),
-                    status="PLACED",
-                    size=size
-                )
-
-                db.session.add(new_order)
-                db.session.flush()
-                created_ids.append(new_order.id)
-
-                time.sleep(0.001)
-
-        db.session.commit()
-
-    except Exception as e:
-        db.session.rollback()
-        print("ORDER CREATE ERROR:", e)
-        return "Order creation failed ❌"
-
-    orders = Order.query.options(
-        joinedload(Order.product),
-        joinedload(Order.address)
-    ).filter(Order.id.in_(created_ids)).all()
-
-    final_amount = session.get("final_amount", 0)
-
-    # ❌ SHIPROCKET REMOVE (12hrs tarvata create chestham)
-
-    # ---------------- WHATSAPP / EMAIL ----------------
-    try:
-        user = User.query.get(session["user_id"])
-        address = Address.query.get(address_id)
-
-        customer_name = user.username or "Customer"
-        customer_mobile = user.mobile or ""
-        order_no = orders[0].order_id if orders else "SKSORDER"
-
-        delivery_address_text = ""
-        if address:
-            delivery_address_text = (
-                f"{address.house or ''}, "
-                f"{address.street or ''}, "
-                f"{address.city or ''}, "
-                f"{address.state or ''} - {address.pincode or ''}"
-            ).strip(", ")
-
-        # WhatsApp confirmation
-        if customer_mobile and orders:
-            first_order = orders[0]
-
-            if not first_order.wa_order_confirm_sent:
-                send_whatsapp_order_confirmation(
-                    customer_mobile,
-                    customer_name,
-                    order_no,
-                    final_amount,
-                    delivery_address_text or "Address not available"
-                )
-
-                for o in orders:
-                    o.wa_order_confirm_sent = True
-                db.session.commit()
-
-        # Email
-        if user and user.email:
-            send_order_email(
-                user,
-                order_no,
-                final_amount,
-                "",
-                "",
-                "https://www.kalasilks.com/my-orders"
-            )
-
-    except Exception as e:
-        print("Order WhatsApp/Email send failed:", e)
-
-    # ---------------- CLEAR SESSION ----------------
-    session.clear()
-
-    return render_template(
-        "payment_success.html",
-        orders=orders,
-        final_amount=final_amount
-    )  
+    return render_template("payment_success.html")
 
 @app.route("/shop")
 def shop():
