@@ -2312,7 +2312,7 @@ import time
 import os
 import random
 
-from flask import request
+from flask import request, session
 
 
 @app.route("/razorpay-webhook", methods=["POST"])
@@ -2438,7 +2438,6 @@ def razorpay_webhook():
 
                         return "Size missing", 400
 
-                    # ✅ IMPORTANT FIX
                     if size_item.stock < qty:
 
                         print("❌ Out of stock")
@@ -2447,44 +2446,54 @@ def razorpay_webhook():
 
                         return "Out of stock", 400
 
-                    # ✅ REDUCE STOCK
+                    # ==========================================
+                    # REDUCE STOCK
+                    # ==========================================
+
                     size_item.stock -= qty
 
-                    # ✅ OPTIONAL
-                    update_product_visibility(product.id)
+                    # ==========================================
+                    # HIDE PRODUCT IF STOCK 0
+                    # ==========================================
+
+                    remaining_stock = ProductSize.query.filter_by(
+                        product_id=product.id
+                    ).all()
+
+                    total_stock = sum([x.stock for x in remaining_stock])
+
+                    if total_stock <= 0:
+
+                        product.hidden = True
 
                 # ==========================================
-                # CREATE ORDERS
+                # CREATE SINGLE ORDER
                 # ==========================================
 
-                for i in range(qty):
+                new_order = Order(
 
-                    new_order = Order(
+                    order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
 
-                        order_id="SKS" + str(int(time.time() * 1000)) + str(random.randint(10, 99)),
+                    user_id=temp.user_id,
 
-                        user_id=temp.user_id,
+                    product_id=product_id,
 
-                        product_id=product_id,
+                    address_id=int(temp.address),
 
-                        address_id=int(temp.address),
+                    payment_method="razorpay",
 
-                        payment_method="razorpay",
+                    payment_id=payment_id,
 
-                        payment_id=payment_id,
+                    status="PLACED",
 
-                        status="PLACED",
+                    size=size
+                )
 
-                        size=size
-                    )
+                db.session.add(new_order)
 
-                    db.session.add(new_order)
+                db.session.flush()
 
-                    db.session.flush()
-
-                    created_orders.append(new_order)
-
-                    time.sleep(0.001)
+                created_orders.append(new_order)
 
             # ==========================================
             # SAVE DB
@@ -2501,6 +2510,12 @@ def razorpay_webhook():
             print("❌ DB Error:", e)
 
             return "DB Error", 400
+
+        # ==========================================
+        # CLEAR CART
+        # ==========================================
+
+        session["cart"] = {}
 
         # ==========================================
         # WHATSAPP + EMAIL
