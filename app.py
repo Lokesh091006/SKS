@@ -3,7 +3,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.utils
 import razorpay
-from flask_migrate import Migrate
+
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
 from database import db
 from models.product import Product, TempOrder
