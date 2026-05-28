@@ -23,28 +23,15 @@
             <div class="slides" id="slides">
 
                 {% if product.image %}
-                    {% if product.image.startswith('http') %}
-                        <img src="{{ product.image.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
-                    {% else %}
-                        <img src="{{ product.image|imgsrc }}">
-                    {% endif %}
-                {% endif %}
+    <img src="{{ product.image }}">
+{% endif %}
 
                 {% if product.image2 %}
-                    {% if product.image2.startswith('http') %}
-                        <img src="{{ product.image2.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
-                    {% else %}
-                        <img src="{{ product.image2|imgsrc }}">
-                    {% endif %}
-                {% endif %}
-
+    <img src="{{ product.image2 }}">
+{% endif %}
                 {% if product.image3 %}
-                    {% if product.image3.startswith('http') %}
-                        <img src="{{ product.image3.replace('/upload/', '/upload/w_800,q_auto,f_auto/') }}">
-                    {% else %}
-                        <img src="{{ product.image3|imgsrc }}">
-                    {% endif %}
-                {% endif %}
+    <img src="{{ product.image3 }}">
+{% endif %}
 
             </div>
 
