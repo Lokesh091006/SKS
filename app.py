@@ -649,27 +649,7 @@ def home():
     )
 
 
-@app.route("/fix-images")
-def fix_images():
 
-    products = Product.query.all()
-
-    default_image = "https://psdaxztsmlrgahcoppkt.supabase.co/storage/v1/object/public/product-images/shirt.jpeg"
-
-    for p in products:
-
-        if p.image and "cloudinary" in p.image:
-            p.image = default_image
-
-        if p.image2 and "cloudinary" in p.image2:
-            p.image2 = default_image
-
-        if p.image3 and "cloudinary" in p.image3:
-            p.image3 = default_image
-
-    db.session.commit()
-
-    return "Images Fixed ✅"
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
