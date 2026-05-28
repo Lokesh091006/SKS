@@ -1,7 +1,7 @@
-import random,re,time,requests,os
-import cloudinary
-import cloudinary.uploader
-import cloudinary.utils
+
+import random,re,time,requests,os,uuid
+from supabase import create_client
+
 import razorpay
 
 from flask import Flask, render_template, redirect, session, url_for, request, jsonify
@@ -30,10 +30,9 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "heic", "heif"}
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+supabase = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY")
 )
 
 
@@ -1678,62 +1677,69 @@ def add_product():
             print("IMG2 NAME:", img2.filename if img2 else "NO FILE")
             print("IMG3 NAME:", img3.filename if img3 else "NO FILE")
 
-            # ===== IMAGE 1 (Required) =====
+
+            # ===== IMAGE 1 =====
             img1_path = None
+
             if img1 and img1.filename != "":
-                upload_result1 = cloudinary.uploader.upload(
-                    img1,
-                    folder="kalasilks/products",
-                    resource_type="image"
+
+                filename1 = f"{uuid.uuid4()}_{img1.filename}"
+
+                supabase.storage.from_("product-images").upload(
+                    filename1,
+                    img1.read(),
+                    {"content-type": img1.content_type}
                 )
-                print("UPLOAD RESULT 1:", upload_result1)
 
-                public_id1 = upload_result1["public_id"]
-
-                img1_path = cloudinary.CloudinaryImage(public_id1).build_url(
-                    secure=True,
-                    format="jpg"
+                img1_path = (
+                    f"{os.getenv('SUPABASE_URL')}"
+                    f"/storage/v1/object/public/product-images/{filename1}"
                 )
 
                 print("FINAL IMG1 URL:", img1_path)
 
-            # ===== IMAGE 2 (Optional) =====
+
+            # ===== IMAGE 2 =====
             img2_path = None
+
             if img2 and img2.filename != "":
-                upload_result2 = cloudinary.uploader.upload(
-                    img2,
-                    folder="kalasilks/products",
-                    resource_type="image"
+
+                filename2 = f"{uuid.uuid4()}_{img2.filename}"
+
+                supabase.storage.from_("product-images").upload(
+                    filename2,
+                    img2.read(),
+                    {"content-type": img2.content_type}
                 )
-                print("UPLOAD RESULT 2:", upload_result2)
 
-                public_id2 = upload_result2["public_id"]
-
-                img2_path = cloudinary.CloudinaryImage(public_id2).build_url(
-                    secure=True,
-                    format="jpg"
+                img2_path = (
+                    f"{os.getenv('SUPABASE_URL')}"
+                    f"/storage/v1/object/public/product-images/{filename2}"
                 )
 
                 print("FINAL IMG2 URL:", img2_path)
 
-            # ===== IMAGE 3 (Optional) =====
+
+            # ===== IMAGE 3 =====
             img3_path = None
+
             if img3 and img3.filename != "":
-                upload_result3 = cloudinary.uploader.upload(
-                    img3,
-                    folder="kalasilks/products",
-                    resource_type="image"
+
+                filename3 = f"{uuid.uuid4()}_{img3.filename}"
+
+                supabase.storage.from_("product-images").upload(
+                    filename3,
+                    img3.read(),
+                    {"content-type": img3.content_type}
                 )
-                print("UPLOAD RESULT 3:", upload_result3)
 
-                public_id3 = upload_result3["public_id"]
-
-                img3_path = cloudinary.CloudinaryImage(public_id3).build_url(
-                    secure=True,
-                    format="jpg"
+                img3_path = (
+                    f"{os.getenv('SUPABASE_URL')}"
+                    f"/storage/v1/object/public/product-images/{filename3}"
                 )
 
                 print("FINAL IMG3 URL:", img3_path)
+
 
             # ===== SAVE PRODUCT =====
             new_product = Product(
@@ -1754,8 +1760,10 @@ def add_product():
             db.session.add(new_product)
             db.session.commit()
 
+
             # ===== SAVE SIZES WITH STOCK =====
             if sizes and stocks:
+
                 size_list = sizes.split(",")
                 stock_list = stocks.split(",")
 
@@ -1763,15 +1771,19 @@ def add_product():
                     return "Sizes and Stocks count mismatch ❌"
 
                 for i in range(len(size_list)):
+
                     ps = ProductSize(
                         product_id=new_product.id,
                         size=size_list[i].strip(),
                         stock=int(stock_list[i].strip())
                     )
+
                     db.session.add(ps)
 
                 db.session.commit()
+
                 update_product_visibility(new_product.id)
+
                 db.session.commit()
 
             return redirect("/admin/dashboard")
