@@ -2332,7 +2332,13 @@ def razorpay_verify():
         session["payment_method"] = "razorpay"
         session["razorpay_payment_id"] = razorpay_payment_id
 
-        # ✅ ONLY REDIRECT
+        # ✅ CLEAR CART AFTER SUCCESSFUL PAYMENT
+        session.pop("cart", None)
+        session.pop("total_after_coupon", None)
+        session.pop("buy_now_item", None)
+        session.pop("razorpay_order_id", None)
+
+        # ✅ REDIRECT SUCCESS PAGE
         return redirect(url_for("payment_success"))
 
     except Exception as e:
@@ -2658,10 +2664,15 @@ def payment_success():
     if not payment_id:
         return redirect("/")
 
-    # ✅ FETCH ORDERS CREATED BY WEBHOOK
     orders = Order.query.filter_by(
         payment_id=payment_id
     ).all()
+
+    # ✅ Clear cart
+    session.pop("cart", None)
+    session.pop("total_after_coupon", None)
+    session.pop("buy_now_item", None)
+    session.pop("razorpay_order_id", None)
 
     return render_template(
         "payment_success.html",
