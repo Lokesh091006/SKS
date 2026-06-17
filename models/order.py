@@ -23,8 +23,7 @@ class Order(db.Model):
 
     size = db.Column(db.String(10))
 
-    payment_id = db.Column(db.String(120), unique=True, nullable=True)
-
+    payment_id = db.Column(db.String(120), nullable=True)
     # ✅ SHIPROCKET
     shiprocket_order_id = db.Column(db.String(100), nullable=True)
 
