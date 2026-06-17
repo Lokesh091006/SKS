@@ -40,6 +40,8 @@ supabase = create_client(
 client = razorpay.Client(
     auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET"))
 )
+print("KEY_ID =", os.getenv("RAZORPAY_KEY_ID"))
+print("KEY_SECRET =", os.getenv("RAZORPAY_KEY_SECRET"))
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -2247,6 +2249,7 @@ def tracking_webhook():
 
 
 import json
+import os
 
 @app.route("/razorpay-checkout")
 def razorpay_checkout():
@@ -2255,14 +2258,18 @@ def razorpay_checkout():
         return redirect("/login")
 
     amount = session.get("final_amount")
-    cart = session.get("cart")
+    cart = session.get("cart", {})
+    buy_now_item = session.get("buy_now_item")
 
-    if not amount or not cart:
+    if not amount:
+        return redirect(url_for("address"))
+
+    if not cart and not buy_now_item:
+        flash("No items found", "error")
         return redirect(url_for("cart"))
 
     amount_paise = int(float(amount) * 100)
 
-    # ✅ CREATE ORDER IN RAZORPAY
     razorpay_order = client.order.create({
         "amount": amount_paise,
         "currency": "INR",
@@ -2273,18 +2280,20 @@ def razorpay_checkout():
         }
     })
 
-    # 🔥 DELETE OLD TEMP (important)
-    TempOrder.query.filter_by(
-        razorpay_order_id=razorpay_order["id"]
-    ).delete()
+    # BUY NOW OR CART DATA
+    if buy_now_item:
+        temp_data = {
+            "buy_now": buy_now_item
+        }
+    else:
+        temp_data = cart
 
-    # 🔥 SAVE CART
     temp = TempOrder(
         user_id=session["user_id"],
         razorpay_order_id=razorpay_order["id"],
         total_amount=amount,
         address=session.get("address"),
-        cart_data=json.dumps(cart)
+        cart_data=json.dumps(temp_data)
     )
 
     db.session.add(temp)
